@@ -7,7 +7,7 @@ import { generateRefreshToken } from "../utils/generateRefreshToken.js";
 import jwt from "jsonwebtoken";
 import { validateEmail } from "../utils/ValidateEmail.js";
 import sendEmail from "../utils/sendEmail.js";
-import logActivity from './../utils/logActivity';
+import logActivity from "./../utils/logActivity";
 import Notification from "../models/notification.model.js";
 
 const cookieOptions = () => ({
@@ -57,6 +57,31 @@ export const signup = AsyncHandler(async (req, res) => {
     "-password -refreshToken"
   );
 
+  await sendEmail({
+    to: createdUser.email,
+    subject: "Welcome to AcadLytics",
+    html: `
+    <h2>Welcome ${createdUser.name}</h2>
+    <p>Your account has been created successfully</p>
+    <p>Start submitting feedback and tracking CO attainment</p>
+    `,
+  });
+
+  await Notification.create({
+    recipient: createdUser._id,
+    type: "system",
+    message: "Welcome to AcadLytics🎉🎉",
+  });
+
+  await logActivity({
+    user: createdUser._id,
+    action: "USER_SIGNUP",
+    metadata: {
+      email: createdUser.email,
+      role: createdUser.role,
+    },
+  });
+
   return res
     .status(201)
     .cookie("accessToken", accessToken, cookieOptions())
@@ -104,6 +129,17 @@ export const login = AsyncHandler(async (req, res) => {
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
+
+  await Notification.create({
+    recipient: loggedInUser._id,
+    type: "system",
+    message: "Login successful",
+  });
+
+  await logActivity({
+    user: loggedInUser._id,
+    action: "USER_LOGIN",
+  });
 
   return res
     .status(200)
@@ -179,6 +215,17 @@ export const googleCallback = AsyncHandler(async (req, res) => {
 
   user.refreshToken = refreshToken;
   await user.save({ validateBeforeSave: false });
+
+  await Notification.create({
+    recipient: user._id,
+    type: "system",
+    message: "Google login successful",
+  });
+
+  await logActivity({
+    user: user._id,
+    action: "GOOGLE_LOGIN",
+  });
 
   return res
     .cookie("accessToken", accessToken, cookieOptions())
