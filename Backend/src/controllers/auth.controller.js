@@ -6,6 +6,9 @@ import { generateAccessToken } from "../utils/generateAccessToken.js";
 import { generateRefreshToken } from "../utils/generateRefreshToken.js";
 import jwt from "jsonwebtoken";
 import { validateEmail } from "../utils/ValidateEmail.js";
+import sendEmail from "../utils/sendEmail.js";
+import logActivity from './../utils/logActivity';
+import Notification from "../models/notification.model.js";
 
 const cookieOptions = () => ({
   httpOnly: true,
