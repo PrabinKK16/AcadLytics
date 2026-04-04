@@ -11,6 +11,7 @@ const cookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
 export const signup = AsyncHandler(async (req, res) => {
@@ -165,4 +166,19 @@ export const refreshAccessToken = AsyncHandler(async (req, res) => {
 
 export const getCurrentUser = AsyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, req.user));
+});
+
+export const googleCallback = AsyncHandler(async (req, res) => {
+  const user = req.user;
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .cookie("accessToken", accessToken, cookieOptions())
+    .cookie("refreshToken", refreshToken, cookieOptions())
+    .redirect(`${process.env.FRONTEND_URL}/dashboard?auth=success`);
 });
