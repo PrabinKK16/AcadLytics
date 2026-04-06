@@ -3,7 +3,6 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import FeedbackSubmission from "../models/feedbackSubmission.model.js";
 import Response from "../models/response.model.js";
-import Question from "../models/question.model.js";
 import Course from "../models/course.model.js";
 
 export const getCourseAnalytics = AsyncHandler(async (req, res) => {
