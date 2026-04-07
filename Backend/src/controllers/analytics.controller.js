@@ -104,3 +104,29 @@ export const getCourseAnalytics = AsyncHandler(async (req, res) => {
     })
   );
 });
+
+export const exportCourseAnalyticsCSV = AsyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  const analyticsData = await getCourseAnalyticsData(courseId);
+
+  const rows = [
+    ["CO Code", "Description", "Percentage", "Level"],
+    ...analyticsData.coAttainment.map((co) => [
+      co.coCode,
+      co.description,
+      co.percentage,
+      co.level,
+    ]),
+  ];
+
+  const csvContent = rows.map((row) => row.join(",")).join("\n");
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=course-${courseId}-analytics.csv`
+  );
+
+  return res.send(csvContent);
+});

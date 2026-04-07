@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { verifyJWT } from "../middlewares/auth.middleware";
-import { authorizeRoles } from "../middlewares/role.middleware";
-import { createCourse } from "../controllers/admin.controller";
-import { createFeedbackForm } from "../controllers/admin.controller";
-import { addQuestionToForm } from "../controllers/admin.controller";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { authorizeRoles } from "../middlewares/role.middleware.js";
+import { createCourse } from "../controllers/admin.controller.js";
+import { createFeedbackForm } from "../controllers/admin.controller.js";
+import { addQuestionToForm } from "../controllers/admin.controller.js";
 
 const router = Router();
 
