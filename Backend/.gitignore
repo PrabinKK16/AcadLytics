@@ -1,0 +1,87 @@
+# =========================
+# Dependencies
+# =========================
+node_modules/
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Runtime / temp files
+# =========================
+tmp/
+temp/
+*.tmp
+*.pid
+*.seed
+*.pid.lock
+
+# =========================
+# Build / coverage
+# =========================
+dist/
+build/
+coverage/
+.nyc_output/
+
+# =========================
+# Cache
+# =========================
+.cache/
+.parcel-cache/
+.vite/
+.eslintcache
+
+# =========================
+# Uploads / static generated files
+# Keep folder structure if needed
+# =========================
+public/uploads/
+public/reports/
+public/exports/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Optional test artifacts
+# =========================
+jest-results/
+playwright-report/
+test-results/
+
+# =========================
+# PM2 / process managers
+# =========================
+pids/
+*.pid
+
+# =========================
+# Docker
+# =========================
+docker-data/
