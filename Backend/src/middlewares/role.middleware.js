@@ -1,6 +1,6 @@
-import ApiError from "../utils/ApiError";
+import ApiError from "../utils/ApiError.js";
 
-export const authorizeRoles = (...roles) => {
+authorizeRoles = (...roles) => {
   return (req, _, next) => {
     if (!roles.includes(req.user.role)) {
       throw new ApiError(403, "Access denied");
@@ -9,3 +9,5 @@ export const authorizeRoles = (...roles) => {
     next();
   };
 };
+
+export default authorizeRoles;

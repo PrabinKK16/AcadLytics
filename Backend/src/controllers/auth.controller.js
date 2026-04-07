@@ -7,7 +7,7 @@ import { generateRefreshToken } from "../utils/generateRefreshToken.js";
 import jwt from "jsonwebtoken";
 import { validateEmail } from "../utils/ValidateEmail.js";
 import sendEmail from "../utils/sendEmail.js";
-import logActivity from "./../utils/logActivity";
+import logActivity from "./../utils/logActivity.js";
 import Notification from "../models/notification.model.js";
 
 const cookieOptions = () => ({
