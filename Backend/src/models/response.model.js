@@ -16,5 +16,7 @@ const responseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+responseSchema.index({ submission: 1, question: 1 });
+
 const Response = mongoose.model("Response", responseSchema);
 export default Response;

@@ -39,11 +39,8 @@ export const createCourse = AsyncHandler(async (req, res) => {
 
   await Notification.create({
     recipient: faculty,
-    action: "COURSE_CREATED",
-    metadata: {
-      courseId: course._id,
-      faculty,
-    },
+    type: "system",
+    message: `Assigned to ${course.code}`,
   });
 
   return res
@@ -87,7 +84,7 @@ export const createFeedbackForm = AsyncHandler(async (req, res) => {
     user: req.user._id,
     action: "FEEDBACK_FORM_CREATED",
     metadata: {
-      formid: form_id,
+      formid: form._id,
       course,
     },
   });

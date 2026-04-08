@@ -5,7 +5,7 @@ import FeedbackSubmission from "../models/feedbackSubmission.model.js";
 import Response from "../models/response.model.js";
 import Course from "../models/course.model.js";
 
-export const getCourseAnalytics = AsyncHandler(async (req, res) => {
+export const getCourseAnalyticsData = AsyncHandler(async (req, res) => {
   const { courseId } = req.params;
 
   const course = await Course.findById(courseId);

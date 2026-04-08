@@ -6,7 +6,7 @@ import ApiResponse from "./../utils/ApiResponse.js";
 export const getMyNotifications = AsyncHandler(async (req, res) => {
   const notifications = (
     await Notification.find({ recipient: req.user._id })
-  ).toSorted({ createdAt: -1 });
+  ).sort({ createdAt: -1 });
 
   return res
     .status(200)

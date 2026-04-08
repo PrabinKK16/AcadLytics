@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  getCourseAnalytics,
+  getCourseAnalyticsData,
   exportCourseAnalyticsCSV,
 } from "../controllers/analytics.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -13,7 +13,7 @@ router.use(verifyJWT);
 router.get(
   "/course/:courseId",
   authorizeRoles("faculty", "admin"),
-  getCourseAnalytics
+  getCourseAnalyticsData
 );
 
 router.get(
