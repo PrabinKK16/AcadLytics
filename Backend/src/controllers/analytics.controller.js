@@ -4,6 +4,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import FeedbackSubmission from "../models/feedbackSubmission.model.js";
 import Response from "../models/response.model.js";
 import Course from "../models/course.model.js";
+import AnalyticsSnapshot from "../models/analyticsSnapshot.model.js";
 
 export const getCourseAnalyticsData = AsyncHandler(async (req, res) => {
   const { courseId } = req.params;
@@ -90,6 +91,23 @@ export const getCourseAnalyticsData = AsyncHandler(async (req, res) => {
     };
   });
 
+  await AnalyticsSnapshot.findOneAndUpdate(
+    {
+      course: course._id,
+      faculty: course.faculty,
+      semester: course.semester,
+    },
+    {
+      averageScore,
+      totalSubmissions: submissions.length,
+      coAttainment,
+    },
+    {
+      upsert: true,
+      new: true,
+    }
+  );
+
   return res.status(200).json(
     new ApiResponse(200, {
       course: {
@@ -129,4 +147,35 @@ export const exportCourseAnalyticsCSV = AsyncHandler(async (req, res) => {
   );
 
   return res.send(csvContent);
+});
+
+export const getFacultyTrendAnalytics = AsyncHandler(async (req, res) => {
+  const { facultyId } = req.params;
+
+  const snapshots = await AnalyticsSnapshot.find({
+    faculty: facultyId,
+  })
+    .populate("course", "name code semester")
+    .sort({ semester: 1 });
+
+  const trend = snapshots.map((snapshot) => ({
+    semester: snapshot.semester,
+    course: snapshot.course.code,
+    averageScore: snapshot.averageScore,
+    totalSubmissions: snapshot.totalSubmissions,
+    highCOs: snapshot.coAttainment.filter((co) => co.level === "High").length,
+    mediumCOs: snapshot.coAttainment.filter((co) => co.level === "Medium")
+      .length,
+    lowCOs: snapshot.coAttainment.filter((co) => co.level === "Low").length,
+  }));
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        trend,
+        "Faculty trend analytics fetched successfully"
+      )
+    );
 });
