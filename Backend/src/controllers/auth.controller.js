@@ -8,7 +8,6 @@ import jwt from "jsonwebtoken";
 import { validateEmail } from "../utils/ValidateEmail.js";
 import sendEmail from "../utils/sendEmail.js";
 import logActivity from "./../utils/logActivity.js";
-3;
 import Notification from "../models/notification.model.js";
 
 const cookieOptions = () => ({
