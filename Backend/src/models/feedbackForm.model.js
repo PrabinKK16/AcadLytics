@@ -12,6 +12,10 @@ const feedbackFormSchema = new mongoose.Schema(
       default: true,
     },
     deadline: Date,
+    reminderSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
