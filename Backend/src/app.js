@@ -26,7 +26,7 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/notificaions", notificationRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/feedback", feedbackRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/admin", adminRoutes);

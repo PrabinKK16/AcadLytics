@@ -4,15 +4,39 @@ import ApiError from "./../utils/ApiError.js";
 import ApiResponse from "./../utils/ApiResponse.js";
 
 export const getMyNotifications = AsyncHandler(async (req, res) => {
-  const notifications = (
-    await Notification.find({ recipient: req.user._id })
-  ).sort({ createdAt: -1 });
+  const page = Number(req.query.page || 1);
+  const limit = Number(req.query.limit || 10);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, notifications, "Notifications fetched successfully")
-    );
+  const skip = (page - 1) * limit;
+
+  const [notifications, total] = await Promise.all([
+    Notification.find({ recipient: req.user._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+    Notification.countDocuments({
+      recipient: req.user._id,
+    }),
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        notifications,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1,
+        },
+      },
+      "Notifications fetched successfully"
+    )
+  );
 });
 
 export const getUnreadCount = AsyncHandler(async (req, res) => {

@@ -84,7 +84,7 @@ export const createFeedbackForm = AsyncHandler(async (req, res) => {
     user: req.user._id,
     action: "FEEDBACK_FORM_CREATED",
     metadata: {
-      formid: form._id,
+      formId: form._id,
       course,
     },
   });
