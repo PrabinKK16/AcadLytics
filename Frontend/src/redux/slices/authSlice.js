@@ -5,8 +5,8 @@ export const signupUser = createAsyncThunk(
   "auth/signupUser",
   async (formData, thunkAPI) => {
     try {
-      const response = await axiosInstance.post("/api/signup", formData);
-      return response.data;
+      const response = await axiosInstance.post("/auth/signup", formData);
+      return response.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Signup failed",
@@ -20,7 +20,7 @@ export const loginUser = createAsyncThunk(
   async (formData, thunkAPI) => {
     try {
       const response = await axiosInstance.post("/auth/login", formData);
-      return response.data;
+      return response.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Login failed",
@@ -45,7 +45,7 @@ export const logoutUser = createAsyncThunk(
   "auth/logoutUser",
   async (_, thunkAPI) => {
     try {
-      await axiosInstance.post("/api/logout");
+      await axiosInstance.post("/auth/logout");
       return null;
     } catch (error) {
       return thunkAPI.rejectWithValue(

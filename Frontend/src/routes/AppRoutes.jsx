@@ -5,6 +5,7 @@ import ProtectedRoute from "../components/auth/ProtectedRoute";
 import DashboardHome from "../components/dashboard/DashboardHome";
 import Notifications from "../components/dashboard/Notification";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
+import Profile from "../pages/dashboard/Profile";
 
 const AppRoutes = () => {
   return (
@@ -16,10 +17,13 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardHome />} />
           <Route path="notifications" element={<Notifications />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
       </Route>
 
       <Route path="/" element={<Navigate to="/login" replace />} />
+
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 };

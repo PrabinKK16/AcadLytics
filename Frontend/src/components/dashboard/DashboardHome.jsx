@@ -22,8 +22,9 @@ import { motion } from "framer-motion";
 const DashboardHome = () => {
   const dispatch = useDispatch();
 
-  const user = useSelector((state) => state.auth);
-  const { facultyTrend, courseAnalytics, notifications, unreadCount, loading } =
+  const { user } = useSelector((state) => state.auth);
+
+  const { facultyTrend, courseAnalytics, notifications, unreadCount } =
     useSelector((state) => state.dashboard);
 
   useEffect(() => {
@@ -35,12 +36,15 @@ const DashboardHome = () => {
 
     dispatch(fetchNotifications());
     dispatch(fetchUnreadCount());
+  }, [dispatch, user]);
 
-    const sampleCourseId = facultyTrend?.[0]?.courseId;
+  useEffect(() => {
+    const sampleCourseId = facultyTrend?.[0]?.course;
+
     if (sampleCourseId) {
       dispatch(fetchCourseAnalytics(sampleCourseId));
     }
-  }, [dispatch, user]);
+  }, [dispatch, facultyTrend]);
 
   return (
     <div className="space-y-8">
@@ -62,45 +66,52 @@ const DashboardHome = () => {
         />
         <DashboardCard
           title="Notifications"
-          value={notifications.length}
+          value={notifications?.length || 0}
           color="text-emerald-400"
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <div className="rounded-3xl border border-white/10 bg-white/10 p-6 backdrop-blur-xl xl:col-span-2">
-          <h3 className="mb-6 text-lg font-semibold text-white">
+        <div
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2 
+        dark:border-white/10 dark:bg-slate-900"
+        >
+          <h3 className="mb-6 text-lg font-semibold text-slate-800 dark:text-white">
             Faculty Trend
           </h3>
 
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={facultyTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="semester" stroke="#cbd5e1" />
-                <YAxis stroke="#cbd5e1" />
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="semester" />
+                <YAxis />
                 <Tooltip />
                 <Line
                   type="monotone"
                   dataKey="averageScore"
-                  stroke="#22d3ee"
                   strokeWidth={3}
+                  data={facultyTrend}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/10 p-6 backdrop-blur-xl">
-          <h3 className="mb-6 text-lg font-semibold text-white">
+        <div
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm 
+        dark:border-white/10 dark:bg-slate-900"
+        >
+          <h3 className="mb-6 text-lg font-semibold text-slate-800 dark:text-white">
             Recent Notifications
           </h3>
 
           <div className="space-y-4">
-            {notifications.slice(0, 5).map((item) => (
+            {notifications?.slice(0, 5).map((item) => (
               <div
                 key={item._id}
-                className="rounded-2xl bg-white/5 p-4 text-sm text-gray-300"
+                className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-700 
+                dark:bg-slate-800 dark:text-slate-300"
               >
                 {item.message}
               </div>
@@ -109,21 +120,19 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-white/10 p-6 backdrop-blur-xl">
-        <h3 className="mb-6 text-lg font-semibold text-white">CO Attainment</h3>
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
+        <h3 className="mb-6 text-lg font-semibold text-slate-800 dark:text-white">
+          CO Attainment
+        </h3>
 
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={courseAnalytics?.coAttainment || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="coCode" stroke="#cbd5e1" />
-              <YAxis stroke="#cbd5e1" />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="coCode" />
+              <YAxis />
               <Tooltip />
-              <Bar
-                dataKey="percentage"
-                fill="#c084fc"
-                radius={[10, 10, 0, 0]}
-              />
+              <Bar dataKey="percentage" radius={[10, 10, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -137,9 +146,10 @@ const DashboardCard = ({ title, value, color }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-white/10 bg-white/10 p-6 backdrop-blur-xl shadow-2xl"
+      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm 
+      dark:border-white/10 dark:bg-slate-900"
     >
-      <p className="text-sm text-gray-300">{title}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
       <h2 className={`mt-3 text-3xl font-bold ${color}`}>{value}</h2>
     </motion.div>
   );

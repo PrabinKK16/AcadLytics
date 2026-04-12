@@ -38,12 +38,17 @@ const navItems = [
 const Sidebar = () => {
   return (
     <aside
-      className="hidden w-72 border-r 
-    border-white/10 bg-white/5 backdrop-blur-xl lg:flex lg:flex-col"
+      className="hidden w-72 border-r border-slate-200 bg-white 
+      shadow-sm lg:flex lg:flex-col 
+      dark:border-white/10 dark:bg-slate-900"
     >
-      <div className="border-b border-white/10 px-6 py-6">
-        <h1 className="text-2xl font-bold text-cyan-400">AcadLytics</h1>
-        <p className="mt-1 text-sm text-gray-400">Academic Intelligence</p>
+      <div className="border-b border-slate-200 px-6 py-6 dark:border-white/10">
+        <h1 className="text-2xl font-bold text-indigo-600 dark:text-cyan-400">
+          AcadLytics
+        </h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Academic Intelligence
+        </p>
       </div>
 
       <nav className="flex-1 space-y-2 p-4">
@@ -56,15 +61,16 @@ const Sidebar = () => {
               to={item.to}
               end={item.to === "/dashboard"}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
+                `group flex items-center gap-3 rounded-2xl px-4 py-3 
+                font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30"
-                    : "text-gray-300 hover:bg-white/5"
+                    ? "bg-indigo-50 text-indigo-600 shadow-sm dark:bg-cyan-500/10 dark:text-cyan-300"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                 }`
               }
             >
               <Icon size={20} />
-              <span className="font-medium">{item.label}</span>
+              <span>{item.label}</span>
             </NavLink>
           );
         })}
