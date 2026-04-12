@@ -4,7 +4,7 @@ const AuthLayout = ({ title, subtitle, children }) => {
   return (
     <div
       className="min-h-screen relative overflow-hidden 
-    bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100"
+    bg-linear-to-br from-indigo-100 via-purple-100 to-pink-100"
     >
       <div
         className="absolute top-10 left-10 w-72 h-72 

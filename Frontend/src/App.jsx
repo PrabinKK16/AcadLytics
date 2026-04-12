@@ -1,9 +1,16 @@
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { getCurrentUser } from "./redux/slices/authSlice";
+import AppRoutes from "./routes/AppRoutes";
+
 function App() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100">
-      AcadLytics Frontend Started 🚀🚀
-    </div>
-  );
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(getCurrentUser());
+  }, [dispatch]);
+
+  return <AppRoutes />;
 }
 
 export default App;
