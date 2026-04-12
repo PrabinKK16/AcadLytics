@@ -6,6 +6,7 @@ import DashboardHome from "../components/dashboard/DashboardHome";
 import Notifications from "../components/dashboard/Notification";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import Profile from "../pages/dashboard/Profile";
+import Analytics from "../pages/dashboard/Analytics";
 
 const AppRoutes = () => {
   return (
@@ -18,6 +19,7 @@ const AppRoutes = () => {
           <Route index element={<DashboardHome />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="analytics" element={<Analytics />} />
         </Route>
       </Route>
 
