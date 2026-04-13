@@ -11,7 +11,6 @@ const FeedbackForm = () => {
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // fetch enrolled courses once
   useEffect(() => {
     const fetchCourses = async () => {
       try {
@@ -31,7 +30,6 @@ const FeedbackForm = () => {
     fetchCourses();
   }, []);
 
-  // fetch active form whenever selected course changes
   useEffect(() => {
     if (!selectedCourse) return;
 
@@ -89,7 +87,6 @@ const FeedbackForm = () => {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {/* course selector */}
       <div
         className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm 
       dark:border-white/10 dark:bg-slate-900"
