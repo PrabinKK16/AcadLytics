@@ -8,6 +8,9 @@ import DashboardLayout from "../components/dashboard/DashboardLayout";
 import Profile from "../pages/dashboard/Profile";
 import Analytics from "../pages/dashboard/Analytics";
 import FeedbackForm from "../pages/dashboard/FeedbackForm";
+import CreateCourse from "../pages/admin/CreateCourse";
+import CreateFeedbackForm from "../pages/admin/CreateFeedbackForm";
+import AddQuestion from "../pages/admin/AddQuestion";
 
 const AppRoutes = () => {
   return (
@@ -22,6 +25,9 @@ const AppRoutes = () => {
           <Route path="profile" element={<Profile />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="feedback" element={<FeedbackForm />} />
+          <Route path="admin/create-course" element={<CreateCourse />} />
+          <Route path="admin/create-form" element={<CreateFeedbackForm />} />
+          <Route path="admin/add-question" element={<AddQuestion />} />
         </Route>
       </Route>
 

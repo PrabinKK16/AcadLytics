@@ -1,15 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import {
-  User,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Chrome,
-  ShieldCheck,
-} from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
@@ -44,9 +36,9 @@ const Signup = () => {
         role: data.role,
       };
 
-      const result = await dispatch(signupUser(payload)).unwrap();
+      await dispatch(signupUser(payload)).unwrap();
 
-      toast.success(result.message || "Signup successful");
+      toast.success("Signup successful");
       navigate("/dashboard");
     } catch (error) {
       toast.error(error || "Signup failed");
@@ -66,13 +58,13 @@ const Signup = () => {
         <div>
           <label className="text-sm font-medium text-gray-700">Full Name</label>
 
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 transition-all">
+          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-400">
             <User size={18} className="text-gray-400" />
 
             <input
               type="text"
               placeholder="Enter your full name"
-              className="w-full bg-transparent outline-none text-gray-700"
+              className="w-full bg-transparent text-gray-700 outline-none"
               {...register("name", {
                 required: "Name is required",
                 minLength: {
@@ -93,13 +85,13 @@ const Signup = () => {
             Email Address
           </label>
 
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 transition-all">
+          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-400">
             <Mail size={18} className="text-gray-400" />
 
             <input
               type="email"
               placeholder="Enter your email"
-              className="w-full bg-transparent outline-none text-gray-700"
+              className="w-full bg-transparent text-gray-700 outline-none"
               {...register("email", {
                 required: "Email is required",
                 pattern: {
@@ -124,7 +116,7 @@ const Signup = () => {
             <ShieldCheck size={18} className="text-gray-400" />
 
             <select
-              className="w-full bg-transparent outline-none text-gray-700"
+              className="w-full bg-transparent text-gray-700 outline-none"
               {...register("role", {
                 required: "Role is required",
               })}
@@ -144,13 +136,13 @@ const Signup = () => {
         <div>
           <label className="text-sm font-medium text-gray-700">Password</label>
 
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 transition-all">
+          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-400">
             <Lock size={18} className="text-gray-400" />
 
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Create password"
-              className="w-full bg-transparent outline-none text-gray-700"
+              className="w-full bg-transparent text-gray-700 outline-none"
               {...register("password", {
                 required: "Password is required",
                 minLength: {
@@ -163,7 +155,7 @@ const Signup = () => {
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 transition hover:text-gray-600"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -181,13 +173,13 @@ const Signup = () => {
             Confirm Password
           </label>
 
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 transition-all">
+          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-400">
             <Lock size={18} className="text-gray-400" />
 
             <input
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm password"
-              className="w-full bg-transparent outline-none text-gray-700"
+              className="w-full bg-transparent text-gray-700 outline-none"
               {...register("confirmPassword", {
                 required: "Confirm your password",
                 validate: (value) =>
@@ -198,7 +190,7 @@ const Signup = () => {
             <button
               type="button"
               onClick={() => setShowConfirmPassword((prev) => !prev)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 transition hover:text-gray-600"
             >
               {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -215,7 +207,7 @@ const Signup = () => {
           whileTap={{ scale: 0.98 }}
           disabled={loading}
           type="submit"
-          className="w-full rounded-2xl bg-indigo-600 py-3 font-semibold text-white shadow-lg hover:bg-indigo-700 transition-all disabled:opacity-70"
+          className="w-full rounded-2xl bg-indigo-600 py-3 font-semibold text-white shadow-lg transition-all hover:bg-indigo-700 disabled:opacity-70"
         >
           {loading ? "Creating account..." : "Create Account"}
         </motion.button>
@@ -230,9 +222,13 @@ const Signup = () => {
         <button
           type="button"
           onClick={handleGoogleSignup}
-          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-3 font-medium text-gray-700 hover:bg-gray-50 transition-all"
+          className="flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-3 font-medium text-gray-700 transition-all hover:bg-gray-50"
         >
-          <Chrome size={18} />
+          <img
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            alt="Google"
+            className="h-5 w-5"
+          />
           Continue with Google
         </button>
 

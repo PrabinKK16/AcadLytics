@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Chrome } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
@@ -14,7 +14,6 @@ const Login = () => {
   const navigate = useNavigate();
 
   const { loading } = useSelector((state) => state.auth);
-
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -27,7 +26,7 @@ const Login = () => {
     try {
       const result = await dispatch(loginUser(data)).unwrap();
 
-      toast.success(result.message || "Login successful");
+      toast.success(result?.message || "Login successful");
       navigate("/dashboard");
     } catch (error) {
       toast.error(error || "Login failed");
@@ -49,13 +48,13 @@ const Login = () => {
             Email Address
           </label>
 
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 transition-all">
+          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-400">
             <Mail size={18} className="text-gray-400" />
 
             <input
               type="email"
               placeholder="Enter your email"
-              className="w-full bg-transparent outline-none text-gray-700"
+              className="w-full bg-transparent text-gray-700 outline-none"
               {...register("email", {
                 required: "Email is required",
                 pattern: {
@@ -74,13 +73,13 @@ const Login = () => {
         <div>
           <label className="text-sm font-medium text-gray-700">Password</label>
 
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 transition-all">
+          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-400">
             <Lock size={18} className="text-gray-400" />
 
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
-              className="w-full bg-transparent outline-none text-gray-700"
+              className="w-full bg-transparent text-gray-700 outline-none"
               {...register("password", {
                 required: "Password is required",
                 minLength: {
@@ -93,7 +92,7 @@ const Login = () => {
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 transition hover:text-gray-600"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -110,7 +109,7 @@ const Login = () => {
           whileTap={{ scale: 0.98 }}
           disabled={loading}
           type="submit"
-          className="w-full rounded-2xl bg-indigo-600 py-3 font-semibold text-white shadow-lg hover:bg-indigo-700 transition-all disabled:opacity-70"
+          className="w-full rounded-2xl bg-indigo-600 py-3 font-semibold text-white shadow-lg transition-all hover:bg-indigo-700 disabled:opacity-70"
         >
           {loading ? "Logging in..." : "Login"}
         </motion.button>
@@ -125,9 +124,13 @@ const Login = () => {
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-3 font-medium text-gray-700 hover:bg-gray-50 transition-all"
+          className="flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-3 font-medium text-gray-700 transition-all hover:bg-gray-50"
         >
-          <Chrome size={18} />
+          <img
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            alt="Google"
+            className="h-5 w-5"
+          />
           Continue with Google
         </button>
 

@@ -1,11 +1,7 @@
+import "dotenv/config";
 import app from "./app.js";
 import connectDB from "./db/index.js";
-import dotenv from "dotenv";
 import startSchedulers from "./utils/scheduler.js";
-
-dotenv.config({
-  path: "./.env",
-});
 
 const port = process.env.PORT || 5000;
 
@@ -14,7 +10,7 @@ connectDB()
     startSchedulers();
 
     app.on("error", (error) => {
-      console.error("Error: ", error);
+      console.error("Error:", error);
       throw error;
     });
 
@@ -23,5 +19,5 @@ connectDB()
     });
   })
   .catch((error) => {
-    console.error("MongoDB connection failed");
+    console.error("MongoDB connection failed", error);
   });
