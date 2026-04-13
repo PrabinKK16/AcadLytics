@@ -9,6 +9,7 @@ import feedbackRoutes from "./routes/feedback.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
+import enrollmentRoutes from "./routes/enrollment.routes.js";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/api/v1/feedback", feedbackRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/enrollments", enrollmentRoutes);
 
 app.use(errorHandler);
 

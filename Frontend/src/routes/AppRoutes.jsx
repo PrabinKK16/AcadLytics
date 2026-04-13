@@ -7,6 +7,7 @@ import Notifications from "../components/dashboard/Notification";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import Profile from "../pages/dashboard/Profile";
 import Analytics from "../pages/dashboard/Analytics";
+import FeedbackForm from "../pages/dashboard/FeedbackForm";
 
 const AppRoutes = () => {
   return (
@@ -20,6 +21,7 @@ const AppRoutes = () => {
           <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<Profile />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="feedback" element={<FeedbackForm />} />
         </Route>
       </Route>
 

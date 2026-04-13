@@ -1,5 +1,5 @@
 import ApiError from "./ApiError.js";
-import Course from '../models/course.model.js'
+import Course from "../models/course.model.js";
 import FeedbackSubmission from "../models/feedbackSubmission.model.js";
 import Response from "../models/response.model.js";
 import AnalyticsSnapshot from "../models/analyticsSnapshot.model.js";

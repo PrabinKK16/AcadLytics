@@ -17,7 +17,7 @@ import {
   Bar,
 } from "recharts";
 import { motion } from "framer-motion";
-import { Download } from "lucide-react";
+import { Download, Brain, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 
 const Analytics = () => {
@@ -92,6 +92,56 @@ const Analytics = () => {
           </div>
         </button>
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-3xl border border-indigo-200 bg-linear-to-br
+        from-indigo-50 to-purple-50 p-6 shadow-sm
+        dark:border-cyan-500/20 dark:from-slate-900 dark:to-slate-950"
+      >
+        <div className="mb-5 flex items-center gap-3">
+          <div
+            className="rounded-2xl bg-indigo-100 p-3 text-indigo-600
+            dark:bg-cyan-500/10 dark:text-cyan-300"
+          >
+            <Brain size={22} />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
+              AI Smart Insights
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Intelligent academic recommendations from student feedback
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {courseAnalytics?.insights?.length ? (
+            courseAnalytics.insights.map((insight, index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 rounded-2xl bg-white/70 p-4
+                shadow-sm dark:bg-slate-800/60"
+              >
+                <Sparkles
+                  size={18}
+                  className="mt-0.5 text-indigo-500 dark:text-cyan-300"
+                />
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  {insight}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-slate-500 dark:text-slate-400">
+              Insights will appear once feedback data is available.
+            </p>
+          )}
+        </div>
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

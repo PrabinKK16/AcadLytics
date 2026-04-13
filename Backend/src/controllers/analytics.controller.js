@@ -2,21 +2,25 @@ import AsyncHandler from "../utils/AsyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import AnalyticsSnapshot from "../models/analyticsSnapshot.model.js";
 import { buildCourseAnalytics } from "../utils/analytics.service.js";
+import generateAnalyticsInsights from "../utils/generateAnalyticsInsights.js";
 
 export const getCourseAnalyticsData = AsyncHandler(async (req, res) => {
   const { courseId } = req.params;
 
   const analyticsData = await buildCourseAnalytics(courseId);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        analyticsData,
-        "Course analytics fetched successfully"
-      )
-    );
+  const insights = generateAnalyticsInsights(analyticsData);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        ...analyticsData,
+        insights,
+      },
+      "Course analytics fetched successfully"
+    )
+  );
 });
 
 export const exportCourseAnalyticsCSV = AsyncHandler(async (req, res) => {
@@ -35,7 +39,7 @@ export const exportCourseAnalyticsCSV = AsyncHandler(async (req, res) => {
   ];
 
   const csvContent = rows
-    .map((row) => row.map((item) => "${item}").join(","))
+    .map((row) => row.map((item) => `"${item}"`).join(","))
     .join("\n");
 
   res.setHeader("Content-Type", "text/csv");
@@ -56,7 +60,8 @@ export const getFacultyTrendAnalytics = AsyncHandler(async (req, res) => {
 
   const trend = snapshots.map((snapshot) => ({
     semester: snapshot.semester,
-    course: snapshot.course?.code,
+    course: snapshot.course?._id,
+    courseCode: snapshot.course?.code,
     averageScore: snapshot.averageScore,
     totalSubmissions: snapshot.totalSubmissions,
     highCOs: snapshot.coAttainment.filter((co) => co.level === "High").length,
