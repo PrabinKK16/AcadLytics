@@ -115,7 +115,7 @@ const dashboardSlice = createSlice({
       })
 
       .addCase(fetchNotifications.fulfilled, (state, action) => {
-        state.notifications = action.payload;
+        state.notifications = action.payload.notifications || [];
       })
 
       .addCase(fetchUnreadCount.fulfilled, (state, action) => {
