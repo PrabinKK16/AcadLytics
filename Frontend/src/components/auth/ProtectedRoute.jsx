@@ -2,20 +2,18 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 const ProtectedRoute = () => {
-  const { isAuthenticated, loading } = useSelector((state) => state.auth);
-
+  const { isAuthenticated, loading } = useSelector((s) => s.auth);
   const location = useLocation();
 
   if (loading) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center 
-      bg-linear-to-br from-indigo-100 via-purple-100 to-pink-100"
-      >
-        <div
-          className="h-12 w-12 rounded-full border-4 
-        border-indigo-500 border-t-transparent animate-spin"
-        />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-[#0b0f1a] dark:to-[#0d1117]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 rounded-full border-[3px] border-indigo-500 border-t-transparent animate-spin" />
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Loading...
+          </p>
+        </div>
       </div>
     );
   }

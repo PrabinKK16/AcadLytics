@@ -18,9 +18,10 @@ createRoot(document.getElementById("root")).render(
             position="top-right"
             toastOptions={{
               style: {
-                borderRadius: "14px",
+                borderRadius: "12px",
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: "14px",
+                fontWeight: 500,
               },
             }}
           />
