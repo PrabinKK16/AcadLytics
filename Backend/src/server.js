@@ -3,7 +3,7 @@ import app from "./app.js";
 import connectDB from "./db/index.js";
 import startSchedulers from "./utils/scheduler.js";
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 10000;
 
 connectDB()
   .then(() => {
