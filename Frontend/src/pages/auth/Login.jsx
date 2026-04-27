@@ -61,10 +61,6 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = () => {
-    window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google`;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 dark:from-[#0b0f1a] dark:via-[#0d1117] dark:to-[#0b0f1a]">
       {/* Top bar */}
@@ -179,31 +175,9 @@ export default function Login() {
               disabled={loading}
               className="mt-2 w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition hover:bg-indigo-700 disabled:opacity-60"
             >
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? "Logging in…" : "Log in"}
             </motion.button>
           </form>
-
-          {/* Divider */}
-          <div className="relative my-5 flex items-center">
-            <div className="flex-1 border-t border-slate-200 dark:border-white/10" />
-            <span className="mx-3 text-xs font-medium text-slate-400 dark:text-slate-500">
-              OR
-            </span>
-            <div className="flex-1 border-t border-slate-200 dark:border-white/10" />
-          </div>
-
-          {/* Google */}
-          <button
-            onClick={handleGoogle}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#1e2535] dark:text-slate-200 dark:hover:bg-white/10"
-          >
-            <img
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              alt="Google"
-              className="h-4 w-4"
-            />
-            Continue with Google
-          </button>
 
           <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
             Don&apos;t have an account?{" "}

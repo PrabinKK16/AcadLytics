@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
   Hash,
@@ -7,10 +7,15 @@ import {
   User,
   Plus,
   CheckCircle2,
+  Layers,
+  Trash2,
+  AlertTriangle,
+  X,
+  RefreshCw,
 } from "lucide-react";
 import axiosInstance from "../../services/axiosInstance";
 import toast from "react-hot-toast";
-import { Card, SectionHeader, Input, Button } from "../../components/ui/index";
+import { Card, SectionHeader } from "../../components/ui/index";
 
 const Field = ({ label, icon: Icon, children }) => (
   <div>
@@ -24,131 +29,410 @@ const Field = ({ label, icon: Icon, children }) => (
   </div>
 );
 
+// ── Delete confirm modal ───────────────────────────────────────────────────
+function DeleteModal({ course, onConfirm, onCancel, loading }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ scale: 0.93, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.93, opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-[#1a2234]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-500/15">
+            <AlertTriangle
+              size={18}
+              className="text-rose-600 dark:text-rose-400"
+            />
+          </div>
+          <div>
+            <h3 className="font-semibold text-slate-800 dark:text-white">
+              Delete Subject
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              This action cannot be undone
+            </p>
+          </div>
+          <button
+            onClick={onCancel}
+            className="ml-auto rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
+          Are you sure you want to delete{" "}
+          <span className="font-semibold text-slate-800 dark:text-white">
+            {course?.name} ({course?.code})
+          </span>
+          ? All associated feedback forms and questions will also be removed.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 disabled:opacity-60"
+          >
+            {loading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <Trash2 size={14} />
+            )}
+            {loading ? "Deleting…" : "Delete Subject"}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function AdminCourses() {
+  // ── Create course form ───────────────────────────────────────────────────
   const [form, setForm] = useState({
     name: "",
     code: "",
     semester: "",
     faculty: "",
   });
-  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // ── Manage subjects section ──────────────────────────────────────────────
+  const [subjects, setSubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const update = (key) => (e) =>
     setForm((p) => ({ ...p, [key]: e.target.value }));
 
+  const fetchSubjects = async () => {
+    setSubjectsLoading(true);
+    try {
+      const res = await axiosInstance.get("/admin/subjects");
+      setSubjects(res.data?.data || []);
+    } catch {
+      toast.error("Could not load subjects");
+    } finally {
+      setSubjectsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true);
+      setCreating(true);
       await axiosInstance.post("/admin/course", form);
       toast.success("Course created successfully");
       setForm({ name: "", code: "", semester: "", faculty: "" });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
+      fetchSubjects(); // refresh list
     } catch (err) {
       toast.error(err.response?.data?.message || "Course creation failed");
     } finally {
-      setLoading(false);
+      setCreating(false);
     }
   };
 
-  return (
-    <div className="mx-auto max-w-2xl">
-      <SectionHeader
-        title="Create Course"
-        subtitle="Add a new course and assign it to a faculty member"
-      />
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await axiosInstance.delete(`/admin/subjects/${deleteTarget._id}`);
+      toast.success(`${deleteTarget.name} deleted`);
+      setSubjects((prev) => prev.filter((s) => s._id !== deleteTarget._id));
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
+  const filteredSubjects = subjects.filter(
+    (s) =>
+      s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.faculty?.name?.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* ── Create Course ──────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-2xl">
+        <SectionHeader
+          title="Create Course"
+          subtitle="Add a new course and assign it to a faculty member"
+        />
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="p-7">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Field label="Course Name" icon={BookOpen}>
+                <input
+                  value={form.name}
+                  onChange={update("name")}
+                  placeholder="e.g. Data Structures & Algorithms"
+                  required
+                  className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
+                />
+              </Field>
+              <Field label="Course Code" icon={Hash}>
+                <input
+                  value={form.code}
+                  onChange={update("code")}
+                  placeholder="e.g. CS301"
+                  required
+                  className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
+                />
+              </Field>
+              <Field label="Semester" icon={Calendar}>
+                <input
+                  value={form.semester}
+                  onChange={update("semester")}
+                  placeholder="e.g. Fall 2024"
+                  required
+                  className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
+                />
+              </Field>
+              <Field label="Faculty User ID" icon={User}>
+                <input
+                  value={form.faculty}
+                  onChange={update("faculty")}
+                  placeholder="Paste faculty MongoDB user ID"
+                  required
+                  className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
+                />
+              </Field>
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 disabled:opacity-60"
+                >
+                  {creating ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Plus size={16} />
+                  )}
+                  {creating ? "Creating…" : "Create Course"}
+                </button>
+                {success && (
+                  <motion.span
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"
+                  >
+                    <CheckCircle2 size={16} /> Created successfully!
+                  </motion.span>
+                )}
+              </div>
+            </form>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mt-5 rounded-2xl border border-amber-200/60 bg-amber-50/70 p-4 dark:border-amber-500/20 dark:bg-amber-500/[0.05]"
+        >
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-400">
+            💡 Tip
+          </p>
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-500">
+            The Faculty User ID must be a valid MongoDB ObjectId of a user with
+            the{" "}
+            <code className="rounded bg-amber-100 px-1 dark:bg-amber-500/10">
+              faculty
+            </code>{" "}
+            role. You can find it from the list below.
+          </p>
+        </motion.div>
+      </div>
+
+      {/* ── Manage Subjects ────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
       >
-        <Card className="p-7">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Field label="Course Name" icon={BookOpen}>
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Layers size={18} className="text-rose-500" />
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">
+                Manage Subjects
+              </h2>
+            </div>
+            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+              {subjects.length} subject{subjects.length !== 1 ? "s" : ""}{" "}
+              registered
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/[0.03]">
+              <Hash size={14} className="text-slate-400" />
               <input
-                value={form.name}
-                onChange={update("name")}
-                placeholder="e.g. Data Structures & Algorithms"
-                required
-                className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search subjects…"
+                className="w-40 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
               />
-            </Field>
-            <Field label="Course Code" icon={Hash}>
-              <input
-                value={form.code}
-                onChange={update("code")}
-                placeholder="e.g. CS301"
-                required
-                className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
+            </div>
+            <button
+              onClick={fetchSubjects}
+              disabled={subjectsLoading}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:bg-white/[0.06]"
+              title="Refresh"
+            >
+              <RefreshCw
+                size={14}
+                className={subjectsLoading ? "animate-spin" : ""}
               />
-            </Field>
-            <Field label="Semester" icon={Calendar}>
-              <input
-                value={form.semester}
-                onChange={update("semester")}
-                placeholder="e.g. Fall 2024"
-                required
-                className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
-              />
-            </Field>
-            <Field label="Faculty User ID" icon={User}>
-              <input
-                value={form.faculty}
-                onChange={update("faculty")}
-                placeholder="Paste faculty MongoDB user ID"
-                required
-                className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
-              />
-            </Field>
+            </button>
+          </div>
+        </div>
 
-            <div className="flex items-center gap-3 pt-1">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 disabled:opacity-60"
-              >
-                {loading ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Plus size={16} />
-                )}
-                {loading ? "Creating…" : "Create Course"}
-              </button>
-              {success && (
-                <motion.span
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"
+        <Card className="overflow-hidden p-0">
+          {subjectsLoading ? (
+            <div className="space-y-0">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 border-b border-slate-100 p-4 dark:border-white/[0.05]"
                 >
-                  <CheckCircle2 size={16} /> Created successfully!
-                </motion.span>
+                  <div className="h-9 w-9 animate-pulse rounded-xl bg-slate-100 dark:bg-white/[0.05]" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-40 animate-pulse rounded bg-slate-100 dark:bg-white/[0.05]" />
+                    <div className="h-2.5 w-24 animate-pulse rounded bg-slate-100 dark:bg-white/[0.05]" />
+                  </div>
+                  <div className="h-7 w-16 animate-pulse rounded-lg bg-slate-100 dark:bg-white/[0.05]" />
+                </div>
+              ))}
+            </div>
+          ) : filteredSubjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-14">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/[0.05]">
+                <BookOpen size={22} className="text-slate-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                {searchQuery
+                  ? "No subjects match your search"
+                  : "No subjects yet"}
+              </p>
+              {!searchQuery && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Create a course above to get started
+                </p>
               )}
             </div>
-          </form>
+          ) : (
+            <div>
+              {/* Table header */}
+              <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3 dark:border-white/[0.05] dark:bg-white/[0.02]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  #
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Subject
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 hidden sm:block">
+                  Code
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 hidden md:block">
+                  Faculty
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Action
+                </span>
+              </div>
+
+              <AnimatePresence initial={false}>
+                {filteredSubjects.map((subject, idx) => (
+                  <motion.div
+                    key={subject._id}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 border-b border-slate-100 px-5 py-4 transition hover:bg-slate-50 dark:border-white/[0.04] dark:hover:bg-white/[0.02]"
+                  >
+                    {/* Index */}
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-xs font-bold text-rose-500 dark:bg-rose-500/10 dark:text-rose-400">
+                      {idx + 1}
+                    </span>
+
+                    {/* Name */}
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                        {subject.name}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        Semester: {subject.semester}
+                      </p>
+                    </div>
+
+                    {/* Code */}
+                    <span className="hidden rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 sm:block">
+                      {subject.code}
+                    </span>
+
+                    {/* Faculty */}
+                    <span className="hidden max-w-[140px] truncate text-xs text-slate-500 dark:text-slate-400 md:block">
+                      {subject.faculty?.name || "—"}
+                    </span>
+
+                    {/* Delete button */}
+                    <button
+                      onClick={() => setDeleteTarget(subject)}
+                      className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20"
+                    >
+                      <Trash2 size={12} />
+                      Delete
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
         </Card>
       </motion.div>
 
-      {/* Info card */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="mt-5 rounded-2xl border border-amber-200/60 bg-amber-50/70 p-4 dark:border-amber-500/20 dark:bg-amber-500/[0.05]"
-      >
-        <p className="text-sm font-medium text-amber-800 dark:text-amber-400">
-          💡 Tip
-        </p>
-        <p className="mt-1 text-xs text-amber-700 dark:text-amber-500">
-          The Faculty User ID must be a valid MongoDB ObjectId of a user with
-          the{" "}
-          <code className="rounded bg-amber-100 px-1 dark:bg-amber-500/10">
-            faculty
-          </code>{" "}
-          role. You can find it from your database.
-        </p>
-      </motion.div>
+      {/* ── Delete Confirm Modal ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <DeleteModal
+            course={deleteTarget}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteTarget(null)}
+            loading={deleting}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

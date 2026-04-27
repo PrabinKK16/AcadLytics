@@ -93,3 +93,13 @@ export const changePassword = AsyncHandler(async (req, res) => {
 
   return res.status(200).json(new ApiResponse(200, {}, "Password changed"));
 });
+
+export const getAllFaculty = AsyncHandler(async (req, res) => {
+  const faculty = await User.find({ role: "faculty" })
+    .select("_id name email avatar")
+    .sort({ name: 1 });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, faculty, "Faculty list fetched successfully"));
+});

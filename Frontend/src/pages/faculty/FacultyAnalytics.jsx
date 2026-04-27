@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchFacultyTrend,
   fetchCourseAnalytics,
 } from "../../redux/slices/dashboardSlice";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
   Brain,
@@ -13,6 +13,8 @@ import {
   BarChart3,
   Send,
   AlertTriangle,
+  ChevronDown,
+  BookOpen,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -46,18 +48,57 @@ export default function FacultyAnalytics() {
     (s) => s.dashboard,
   );
 
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Derive unique courses from facultyTrend
+  const courseList = facultyTrend
+    ? Object.values(
+        facultyTrend.reduce((acc, t) => {
+          if (t.course && !acc[t.course]) {
+            acc[t.course] = {
+              id: t.course,
+              code: t.courseCode || t.course,
+              name: t.courseName || t.courseCode || "Unknown",
+            };
+          }
+          return acc;
+        }, {}),
+      )
+    : [];
+
+  const selectedCourse =
+    courseList.find((c) => c.id === selectedCourseId) || courseList[0];
+
   useEffect(() => {
     if (!user) return;
     dispatch(fetchFacultyTrend(user._id));
   }, [dispatch, user]);
 
   useEffect(() => {
-    const id = facultyTrend?.[0]?.course;
-    if (id) dispatch(fetchCourseAnalytics(id));
-  }, [dispatch, facultyTrend]);
+    if (facultyTrend?.length > 0 && !selectedCourseId) {
+      const firstId = facultyTrend[0].course;
+      setSelectedCourseId(firstId);
+      dispatch(fetchCourseAnalytics(firstId));
+    }
+  }, [dispatch, facultyTrend, selectedCourseId]);
+
+  const handleCourseChange = useCallback(
+    (courseId) => {
+      setSelectedCourseId(courseId);
+      dispatch(fetchCourseAnalytics(courseId));
+      setDropdownOpen(false);
+    },
+    [dispatch],
+  );
+
+  const courseTrend =
+    facultyTrend?.filter(
+      (t) => t.course === (selectedCourseId || courseList[0]?.id),
+    ) || [];
 
   const handleExportCSV = async () => {
-    const courseId = facultyTrend?.[0]?.course;
+    const courseId = selectedCourseId || courseList[0]?.id;
     if (!courseId) return toast.error("No course data available");
     try {
       const res = await axiosInstance.get(
@@ -69,7 +110,7 @@ export default function FacultyAnalytics() {
       );
       const a = document.createElement("a");
       a.href = url;
-      a.download = `analytics-${courseId}.csv`;
+      a.download = `analytics-${selectedCourse?.code || courseId}.csv`;
       a.click();
       toast.success("CSV exported");
     } catch {
@@ -79,6 +120,7 @@ export default function FacultyAnalytics() {
 
   const weakAreas =
     courseAnalytics?.coAttainment?.filter((co) => co.level === "Low") || [];
+
   const statCards = [
     {
       title: "Average Score",
@@ -98,7 +140,7 @@ export default function FacultyAnalytics() {
     },
     {
       title: "Semester Snapshots",
-      value: facultyTrend?.length || 0,
+      value: courseTrend?.length || 0,
       icon: TrendingUp,
       color: "text-emerald-600 dark:text-emerald-400",
       bg: "bg-emerald-50 dark:bg-emerald-500/10",
@@ -120,16 +162,90 @@ export default function FacultyAnalytics() {
         title="Analytics"
         subtitle="Detailed course performance and CO attainment analysis"
         action={
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-400"
-          >
-            <Download size={15} /> Export CSV
-          </button>
+          <div className="flex items-center gap-3">
+            {courseList.length > 1 && (
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen((p) => !p)}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 dark:border-white/10 dark:bg-[#111827] dark:text-white dark:hover:border-violet-500/40 dark:hover:bg-violet-500/10"
+                >
+                  <BookOpen size={14} className="text-violet-500" />
+                  {selectedCourse?.code || "Select Course"}
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+                <AnimatePresence>
+                  {dropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                      transition={{ duration: 0.13 }}
+                      className="absolute right-0 z-50 mt-2 min-w-[220px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-[#1a2234]"
+                    >
+                      {courseList.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => handleCourseChange(c.id)}
+                          className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-violet-50 dark:hover:bg-violet-500/10 ${
+                            c.id === selectedCourseId
+                              ? "bg-violet-50 font-semibold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300"
+                              : "text-slate-600 dark:text-slate-300"
+                          }`}
+                        >
+                          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-600 dark:bg-violet-500/20 dark:text-violet-400">
+                            {c.code?.[0] || "C"}
+                          </span>
+                          <div>
+                            <p className="font-medium">{c.code}</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500">
+                              {c.name}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-400"
+            >
+              <Download size={15} /> Export CSV
+            </button>
+          </div>
         }
       />
 
-      {/* Stat cards */}
+      {selectedCourse && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 rounded-xl border border-violet-200/60 bg-violet-50/60 px-4 py-2.5 dark:border-violet-500/20 dark:bg-violet-500/[0.06]"
+        >
+          <BookOpen
+            size={14}
+            className="text-violet-600 dark:text-violet-400"
+          />
+          <span className="text-sm font-semibold text-violet-700 dark:text-violet-300">
+            {selectedCourse.code}
+          </span>
+          {selectedCourse.name !== selectedCourse.code && (
+            <span className="text-sm text-violet-500 dark:text-violet-400">
+              — {selectedCourse.name}
+            </span>
+          )}
+          <span className="ml-auto text-xs text-violet-400 dark:text-violet-500">
+            {courseTrend.length} semester{courseTrend.length !== 1 ? "s" : ""}{" "}
+            of data
+          </span>
+        </motion.div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((s, i) => {
           const Icon = s.icon;
@@ -161,7 +277,6 @@ export default function FacultyAnalytics() {
         })}
       </div>
 
-      {/* Trend chart */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -169,30 +284,26 @@ export default function FacultyAnalytics() {
       >
         <Card className="p-6">
           <h3 className="mb-1 text-sm font-semibold text-slate-800 dark:text-white">
-            Faculty Score Trend
+            Score Trend{selectedCourse ? ` — ${selectedCourse.code}` : ""}
           </h3>
           <p className="mb-5 text-xs text-slate-400 dark:text-slate-500">
-            Average score progression across semesters
+            Average score progression across semesters for this course
           </p>
-          {loading && !facultyTrend.length ? (
+          {loading && !courseTrend.length ? (
             <Skeleton className="h-72" />
+          ) : !courseTrend.length ? (
+            <EmptyState
+              icon={TrendingUp}
+              title="No trend data"
+              subtitle="No semester snapshots for this course yet"
+            />
           ) : (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
-                  data={facultyTrend}
+                  data={courseTrend}
                   margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
                 >
-                  <defs>
-                    <linearGradient id="vGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="0%"
-                        stopColor="#7c3aed"
-                        stopOpacity={0.12}
-                      />
-                      <stop offset="100%" stopColor="#7c3aed" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="#e2e8f040"
@@ -230,7 +341,6 @@ export default function FacultyAnalytics() {
         </Card>
       </motion.div>
 
-      {/* CO Attainment */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -292,8 +402,6 @@ export default function FacultyAnalytics() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-
-              {/* CO Table */}
               <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 dark:border-white/[0.06]">
                 <table className="w-full text-sm">
                   <thead>
@@ -321,7 +429,7 @@ export default function FacultyAnalytics() {
                         <td className="px-4 py-3 font-semibold text-slate-700 dark:text-white">
                           {co.coCode}
                         </td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 max-w-xs truncate">
+                        <td className="max-w-xs truncate px-4 py-3 text-slate-500 dark:text-slate-400">
                           {co.description}
                         </td>
                         <td className="px-4 py-3 font-semibold text-slate-700 dark:text-white">
@@ -340,7 +448,6 @@ export default function FacultyAnalytics() {
         </Card>
       </motion.div>
 
-      {/* AI Insights */}
       {courseAnalytics?.insights?.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -384,7 +491,6 @@ export default function FacultyAnalytics() {
         </motion.div>
       )}
 
-      {/* Weak areas alert */}
       {weakAreas.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -392,7 +498,7 @@ export default function FacultyAnalytics() {
           transition={{ delay: 0.42 }}
         >
           <div className="rounded-2xl border border-rose-200/60 bg-rose-50/70 p-5 dark:border-rose-500/20 dark:bg-rose-500/[0.05]">
-            <div className="flex items-center gap-2.5 mb-3">
+            <div className="mb-3 flex items-center gap-2.5">
               <AlertTriangle
                 size={16}
                 className="text-rose-600 dark:text-rose-400"

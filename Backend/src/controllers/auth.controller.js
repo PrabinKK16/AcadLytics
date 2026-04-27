@@ -111,7 +111,7 @@ export const login = AsyncHandler(async (req, res) => {
   if (!user.password) {
     throw new ApiError(
       400,
-      "This account uses Google login. Please continue with Google"
+      "This account has no password set. Please contact support."
     );
   }
 
@@ -205,30 +205,4 @@ export const refreshAccessToken = AsyncHandler(async (req, res) => {
 
 export const getCurrentUser = AsyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, req.user));
-});
-
-export const googleCallback = AsyncHandler(async (req, res) => {
-  const user = req.user;
-
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
-
-  user.refreshToken = refreshToken;
-  await user.save({ validateBeforeSave: false });
-
-  await Notification.create({
-    recipient: user._id,
-    type: "system",
-    message: "Google login successful",
-  });
-
-  await logActivity({
-    user: user._id,
-    action: "GOOGLE_LOGIN",
-  });
-
-  return res
-    .cookie("accessToken", accessToken, cookieOptions())
-    .cookie("refreshToken", refreshToken, cookieOptions())
-    .redirect(`${process.env.FRONTEND_URL}/dashboard?auth=success`);
 });

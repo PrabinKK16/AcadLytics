@@ -161,3 +161,56 @@ export const addQuestionToForm = AsyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(201, question, "Question added successfully"));
 });
+
+export const getAllSubjects = AsyncHandler(async (req, res) => {
+  const subjects = await Course.find({})
+    .populate("faculty", "name email avatar")
+    .sort({ createdAt: -1 });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, subjects, "Subjects fetched successfully"));
+});
+
+export const deleteSubject = AsyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const course = await Course.findById(id);
+  if (!course) {
+    throw new ApiError(404, "Subject not found");
+  }
+
+  const forms = await FeedbackForm.find({ course: id });
+  const formIds = forms.map((f) => f._id);
+
+  if (formIds.length > 0) {
+    await Question.deleteMany({ form: { $in: formIds } });
+    await FeedbackForm.deleteMany({ course: id });
+  }
+
+  await CourseOutcome.deleteMany({ course: id });
+
+  if (course.faculty) {
+    await Notification.create({
+      recipient: course.faculty,
+      type: "system",
+      message: `Subject ${course.code} has been removed by the admin`,
+    });
+  }
+
+  await logActivity({
+    user: req.user._id,
+    action: "SUBJECT_DELETED",
+    metadata: {
+      courseId: id,
+      code: course.code,
+      name: course.name,
+    },
+  });
+
+  await Course.findByIdAndDelete(id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Subject deleted successfully"));
+});
