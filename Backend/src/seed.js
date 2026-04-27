@@ -22,6 +22,7 @@ import Question from "./models/question.model.js";
 import FeedbackSubmission from "./models/feedbackSubmission.model.js";
 import Response from "./models/response.model.js";
 import AnalyticsSnapshot from "./models/analyticsSnapshot.model.js";
+import Enrollment from "./models/enrollment.model.js";
 import { DB_NAME } from "./constants.js";
 
 // ─── Option → numeric score mappings ─────────────────────────────────────────
@@ -1986,6 +1987,48 @@ async function seed() {
     bmCreated++;
   }
   console.log(`  ✅ ${bmCreated} BM Student Feedback submissions inserted\n`);
+  // ── Create Enrollment records for all students ──────────────────────────────
+  // CS2103 students: everyone in CO_ATTAINMENT_DATA + CURRICULAR_GAP_DATA + TEACHER_FEEDBACK_DATA
+  console.log("📋 Creating Enrollment records...");
+
+  // Collect unique reg numbers for CS2103
+  const cs2103Regs = new Set();
+  for (const row of CO_ATTAINMENT_DATA) cs2103Regs.add(row.reg);
+  for (const row of CURRICULAR_GAP_DATA) cs2103Regs.add(row.reg);
+  for (const row of TEACHER_FEEDBACK_DATA) {
+    if (row.reg && row.reg !== "null") cs2103Regs.add(row.reg);
+  }
+
+  // Collect unique reg numbers for BM
+  const bmRegs = new Set();
+  for (const row of STUDENT_FEEDBACK_BM_DATA) bmRegs.add(row.reg);
+
+  let enrollCreated = 0;
+  for (const reg of cs2103Regs) {
+    const student = studentMap[reg];
+    if (!student) continue;
+    const exists = await Enrollment.findOne({
+      student: student._id,
+      course: cs2103._id,
+    });
+    if (!exists) {
+      await Enrollment.create({ student: student._id, course: cs2103._id });
+      enrollCreated++;
+    }
+  }
+  for (const reg of bmRegs) {
+    const student = studentMap[reg];
+    if (!student) continue;
+    const exists = await Enrollment.findOne({
+      student: student._id,
+      course: bmCourse._id,
+    });
+    if (!exists) {
+      await Enrollment.create({ student: student._id, course: bmCourse._id });
+      enrollCreated++;
+    }
+  }
+  console.log(`  ✅ ${enrollCreated} Enrollment records created\n`);
 
   // ── Analytics Snapshot (CS2103) ────────────────────────────────────────────
 
