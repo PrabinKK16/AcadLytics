@@ -45,23 +45,38 @@ const RoleRedirect = () => {
     );
   }
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/" replace />;
   if (user?.role === "student") return <Navigate to="/student" replace />;
   if (user?.role === "faculty") return <Navigate to="/faculty" replace />;
   if (user?.role === "admin") return <Navigate to="/admin" replace />;
 
-  return <Navigate to="/login" replace />;
+  return <Navigate to="/" replace />;
+};
+
+const LandingRoute = () => {
+  const { isAuthenticated, authInitialized, user } = useSelector((s) => s.auth);
+
+  if (!authInitialized) return <Landing />;
+
+  if (isAuthenticated) {
+    if (user?.role === "student") return <Navigate to="/student" replace />;
+    if (user?.role === "faculty") return <Navigate to="/faculty" replace />;
+    if (user?.role === "admin") return <Navigate to="/admin" replace />;
+  }
+
+  return <Landing />;
 };
 
 const AppRoutes = () => (
   <Routes>
-    <Route path="/" element={<Landing />} />
+    <Route path="/" element={<LandingRoute />} />
     <Route path="/login" element={<Login />} />
     <Route path="/signup" element={<Signup />} />
     <Route path="/verify-otp" element={<VerifyOTP />} />
     <Route path="/verify-email" element={<VerifyEmail />} />
     <Route path="/forgot-password" element={<ForgotPassword />} />
     <Route path="/reset-password" element={<ResetPassword />} />
+
     <Route path="/dashboard" element={<RoleRedirect />} />
 
     <Route element={<ProtectedRoute />}>
@@ -96,7 +111,7 @@ const AppRoutes = () => (
       </Route>
     </Route>
 
-    <Route path="*" element={<RoleRedirect />} />
+    <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
 

@@ -9,16 +9,15 @@ let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error) => {
-  failedQueue.forEach((prom) => {
-    if (error) prom.reject(error);
-    else prom.resolve();
+  failedQueue.forEach((p) => {
+    if (error) p.reject(error);
+    else p.resolve();
   });
   failedQueue = [];
 };
 
 axiosInstance.interceptors.response.use(
-  (response) => response,
-
+  (res) => res,
   async (error) => {
     const originalRequest = error.config;
 
@@ -38,15 +37,15 @@ axiosInstance.interceptors.response.use(
         await axiosInstance.post("/auth/refresh-token");
         processQueue(null);
         return axiosInstance(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError);
+      } catch (err) {
+        processQueue(err);
 
         const { store } = await import("../redux/store");
         const { logoutUser } = await import("../redux/slices/authSlice");
+
         store.dispatch(logoutUser());
 
-        window.location.href = "/login";
-        return Promise.reject(refreshError);
+        return Promise.reject(err);
       } finally {
         isRefreshing = false;
       }

@@ -16,7 +16,10 @@ export default function VerifyOTP() {
 
   useEffect(() => {
     if (!pendingEmail) {
-      navigate("/login", { replace: true });
+      const stored = localStorage.getItem("pendingEmail");
+      if (!stored) {
+        navigate("/login", { replace: true });
+      }
     }
   }, [pendingEmail, navigate]);
 
