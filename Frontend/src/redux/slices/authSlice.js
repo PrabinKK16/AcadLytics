@@ -43,6 +43,51 @@ export const verifyOTP = createAsyncThunk(
   },
 );
 
+export const verifyEmail = createAsyncThunk(
+  "auth/verifyEmail",
+  async (token, thunkAPI) => {
+    try {
+      const res = await axiosInstance.get(`/auth/verify-email?token=${token}`);
+      return res.data.message;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Email verification failed",
+      );
+    }
+  },
+);
+
+export const forgotPassword = createAsyncThunk(
+  "auth/forgotPassword",
+  async (email, thunkAPI) => {
+    try {
+      const res = await axiosInstance.post("/auth/forgot-password", { email });
+      return res.data.message;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Failed to send reset email",
+      );
+    }
+  },
+);
+
+export const resetPassword = createAsyncThunk(
+  "auth/resetPassword",
+  async ({ token, password }, thunkAPI) => {
+    try {
+      const res = await axiosInstance.post(
+        `/auth/reset-password?token=${token}`,
+        { password },
+      );
+      return res.data.message;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Password reset failed",
+      );
+    }
+  },
+);
+
 export const getCurrentUser = createAsyncThunk(
   "auth/getCurrentUser",
   async (_, thunkAPI) => {
@@ -81,6 +126,18 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(signupUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(signupUser.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(signupUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -88,7 +145,6 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.pendingEmail = action.payload.email;
-
         localStorage.setItem("pendingEmail", action.payload.email);
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -98,19 +154,53 @@ const authSlice = createSlice({
 
       .addCase(verifyOTP.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.loading = false;
-
         state.user = action.payload.user || action.payload;
-
         state.isAuthenticated = true;
         state.pendingEmail = null;
         state.authInitialized = true;
-
         localStorage.removeItem("pendingEmail");
       })
       .addCase(verifyOTP.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(verifyEmail.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyEmail.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(verifyEmail.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(forgotPassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(forgotPassword.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(forgotPassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(resetPassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(resetPassword.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -135,7 +225,6 @@ const authSlice = createSlice({
         state.pendingEmail = null;
         state.error = null;
         state.authInitialized = true;
-
         localStorage.removeItem("pendingEmail");
       });
   },
