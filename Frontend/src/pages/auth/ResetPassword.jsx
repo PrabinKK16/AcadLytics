@@ -1,20 +1,11 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  GraduationCap,
-  Sun,
-  Moon,
-  ArrowLeft,
-} from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Lock, Eye, EyeOff, GraduationCap, Sun, Moon } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { loginUser } from "../../redux/slices/authSlice";
+import { resetPassword } from "../../redux/slices/authSlice";
 import { useTheme } from "../../context/ThemeContext";
 
 const FieldWrap = ({ hasError, children }) => (
@@ -33,41 +24,63 @@ const FieldWrap = ({ hasError, children }) => (
 const inputCls =
   "w-full min-w-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500 dark:text-white dark:placeholder:text-slate-400";
 
-export default function Login() {
+export default function ResetPassword() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { loading } = useSelector((s) => s.auth);
   const { theme, toggleTheme } = useTheme();
+
   const [showPw, setShowPw] = useState(false);
+  const [showCpw, setShowCpw] = useState(false);
+
+  const token = searchParams.get("token");
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm();
 
+  const pw = watch("password");
+
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-indigo-100 to-violet-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center px-5">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+          <p className="text-slate-600 dark:text-slate-300 mb-4">
+            Invalid reset link. Please request a new one.
+          </p>
+          <button
+            onClick={() => navigate("/forgot-password")}
+            className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-indigo-700"
+          >
+            Request New Link
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const onSubmit = async (data) => {
     try {
-      await dispatch(loginUser(data)).unwrap();
-      toast.success("OTP sent to your email!");
-      navigate("/verify-otp");
+      await dispatch(
+        resetPassword({ token, password: data.password }),
+      ).unwrap();
+      toast.success("Password reset! Please log in with your new password.");
+      navigate("/login");
     } catch (err) {
-      toast.error(err || "Login failed");
+      toast.error(err || "Reset failed. The link may have expired.");
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-indigo-100 to-violet-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <div className="flex items-center justify-between px-5 py-4">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-        >
-          <ArrowLeft size={16} /> Back to home
-        </button>
+      <div className="flex items-center justify-end px-5 py-4">
         <button
           onClick={toggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white shadow-sm transition dark:border-slate-700 dark:bg-slate-800"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800"
         >
           {theme === "dark" ? (
             <Sun size={16} className="text-amber-400" />
@@ -92,60 +105,27 @@ export default function Login() {
               <GraduationCap size={22} className="text-white" />
             </div>
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">
-              Welcome back
+              Set new password
             </h1>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Sign in to your AcadLytics account
+              Choose a strong password for your account
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Email Address
+                New Password
               </label>
-              <FieldWrap hasError={!!errors.email}>
-                <Mail size={16} className="flex-shrink-0 text-slate-500" />
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  className={inputCls}
-                  {...register("email", {
-                    required: "Email is required",
-                    pattern: {
-                      value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
-                      message: "Invalid email",
-                    },
-                  })}
-                />
-              </FieldWrap>
-              {errors.email && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Password
-                </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
-                >
-                  Forgot password?
-                </Link>
-              </div>
               <FieldWrap hasError={!!errors.password}>
                 <Lock size={16} className="flex-shrink-0 text-slate-500" />
                 <input
                   type={showPw ? "text" : "password"}
-                  placeholder="Enter password"
+                  placeholder="Min 8 characters"
                   className={inputCls}
                   {...register("password", {
                     required: "Password is required",
+                    minLength: { value: 8, message: "Minimum 8 characters" },
                   })}
                 />
                 <button
@@ -163,25 +143,45 @@ export default function Login() {
               )}
             </div>
 
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Confirm Password
+              </label>
+              <FieldWrap hasError={!!errors.confirmPassword}>
+                <Lock size={16} className="flex-shrink-0 text-slate-500" />
+                <input
+                  type={showCpw ? "text" : "password"}
+                  placeholder="Repeat your password"
+                  className={inputCls}
+                  {...register("confirmPassword", {
+                    required: "Please confirm your password",
+                    validate: (v) => v === pw || "Passwords do not match",
+                  })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCpw((p) => !p)}
+                  className="flex-shrink-0 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                >
+                  {showCpw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </FieldWrap>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
+            </div>
+
             <motion.button
               whileTap={{ scale: 0.97 }}
               type="submit"
               disabled={loading}
               className="mt-2 w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-indigo-700 disabled:opacity-60"
             >
-              {loading ? "Sending OTP…" : "Continue"}
+              {loading ? "Resetting…" : "Reset Password"}
             </motion.button>
           </form>
-
-          <p className="mt-5 text-center text-sm text-slate-600 dark:text-slate-400">
-            Don&apos;t have an account?{" "}
-            <Link
-              to="/signup"
-              className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
-            >
-              Create one
-            </Link>
-          </p>
         </motion.div>
       </div>
     </div>

@@ -17,13 +17,8 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: function () {
-        return !this.googleId;
-      },
-    },
-    googleId: {
-      type: String,
-      default: null,
+      required: true,
+      select: false,
     },
     role: {
       type: String,
@@ -33,22 +28,64 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
+      default: null,
     },
     isVerified: {
       type: Boolean,
       default: false,
     },
+    verifyToken: {
+      type: String,
+      select: false,
+    },
+    verifyTokenExpiry: {
+      type: Date,
+      select: false,
+    },
+    resetPasswordToken: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpiry: {
+      type: Date,
+      select: false,
+    },
     refreshToken: {
       type: String,
+      select: false,
+    },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+    },
+    lockCount: {
+      type: Number,
+      default: 0,
+    },
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpiry: {
+      type: Date,
+      select: false,
+    },
+    otpAttempts: {
+      type: Number,
+      default: 0,
     },
   },
   { timestamps: true }
 );
 
-userSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
 
   this.password = await bcrypt.hash(this.password, 10);
+  next();
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {
