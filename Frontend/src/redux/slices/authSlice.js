@@ -124,6 +124,7 @@ const authSlice = createSlice({
     error: null,
     isAuthenticated: false,
     pendingEmail: null,
+    authInitialized: false,
   },
   reducers: {
     clearError(state) {
@@ -143,6 +144,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -155,6 +157,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+
       .addCase(verifyOTP.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -169,14 +172,18 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+
       .addCase(getCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.authInitialized = true;
       })
       .addCase(getCurrentUser.rejected, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+        state.authInitialized = true;
       })
+
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
         state.isAuthenticated = false;

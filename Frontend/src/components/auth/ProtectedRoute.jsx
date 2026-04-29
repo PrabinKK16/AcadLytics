@@ -2,10 +2,11 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 const ProtectedRoute = () => {
-  const { isAuthenticated, loading } = useSelector((s) => s.auth);
+  const { isAuthenticated, authInitialized } = useSelector((s) => s.auth);
   const location = useLocation();
 
-  if (loading) {
+  // Wait for the initial getCurrentUser check to finish before deciding
+  if (!authInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-[#0b0f1a] dark:to-[#0d1117]">
         <div className="flex flex-col items-center gap-4">

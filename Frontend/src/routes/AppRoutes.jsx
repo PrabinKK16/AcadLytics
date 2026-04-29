@@ -35,7 +35,15 @@ import AdminNotifications from "../pages/admin/AdminNotifications";
 import Profile from "../pages/shared/Profile";
 
 const RoleRedirect = () => {
-  const { user, isAuthenticated } = useSelector((s) => s.auth);
+  const { user, isAuthenticated, authInitialized } = useSelector((s) => s.auth);
+
+  if (!authInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-[#0b0f1a] dark:to-[#0d1117]">
+        <div className="h-10 w-10 rounded-full border-[3px] border-indigo-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.role === "student") return <Navigate to="/student" replace />;
