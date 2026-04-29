@@ -173,6 +173,9 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
 
+      .addCase(getCurrentUser.pending, (state) => {
+        state.authInitialized = false;
+      })
       .addCase(getCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;

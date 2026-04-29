@@ -240,7 +240,7 @@ export const verifyOTP = AsyncHandler(async (req, res) => {
   }
 
   if (!user.isVerified) {
-    throw new ApiError(403, "Email not verified. Please check your inbox.")
+    throw new ApiError(403, "Email not verified. Please check your inbox.");
   }
 
   const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
