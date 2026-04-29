@@ -2,7 +2,13 @@ import axios from "axios";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
-  withCredentials: true,
+  withCredentials: false,
+});
+
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
 });
 
 let isRefreshing = false;
@@ -16,12 +22,29 @@ const processQueue = (error) => {
   failedQueue = [];
 };
 
+const SKIP_REFRESH_URLS = [
+  "/auth/refresh-token",
+  "/auth/logout",
+  "/auth/login",
+  "/auth/signup",
+  "/auth/verify-otp",
+];
+
 axiosInstance.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = originalRequest?.url || "";
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const shouldSkip = SKIP_REFRESH_URLS.some((url) =>
+      requestUrl.includes(url),
+    );
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !shouldSkip
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -34,15 +57,27 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await axiosInstance.post("/auth/refresh-token");
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) throw new Error("No refresh token");
+
+        const res = await axiosInstance.post("/auth/refresh-token", {
+          refreshToken,
+        });
+
+        const { accessToken, refreshToken: newRefresh } = res.data.data;
+        localStorage.setItem("accessToken", accessToken);
+        if (newRefresh) localStorage.setItem("refreshToken", newRefresh);
+
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         processQueue(null);
         return axiosInstance(originalRequest);
       } catch (err) {
         processQueue(err);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
 
         const { store } = await import("../redux/store");
         const { logoutUser } = await import("../redux/slices/authSlice");
-
         store.dispatch(logoutUser());
 
         return Promise.reject(err);

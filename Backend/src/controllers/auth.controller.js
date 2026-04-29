@@ -293,7 +293,13 @@ export const verifyOTP = AsyncHandler(async (req, res) => {
     .status(200)
     .cookie("accessToken", accessToken, cookieOptions())
     .cookie("refreshToken", refreshToken, cookieOptions())
-    .json(new ApiResponse(200, loggedInUser, "Login successful"));
+    .json(
+      new ApiResponse(
+        200,
+        { user: loggedInUser, accessToken, refreshToken },
+        "Login successful"
+      )
+    );
 });
 
 export const logout = AsyncHandler(async (req, res) => {
@@ -350,6 +356,7 @@ export const refreshAccessToken = AsyncHandler(async (req, res) => {
         200,
         {
           accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
         },
         "Token refreshed successfully"
       )
