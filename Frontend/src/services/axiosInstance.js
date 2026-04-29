@@ -1,6 +1,4 @@
 import axios from "axios";
-import { store } from "../redux/store";
-import { logoutUser } from "../redux/slices/authSlice";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -8,16 +6,12 @@ const axiosInstance = axios.create({
 });
 
 let isRefreshing = false;
-
 let failedQueue = [];
 
 const processQueue = (error) => {
   failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve();
-    }
+    if (error) prom.reject(error);
+    else prom.resolve();
   });
   failedQueue = [];
 };
@@ -42,16 +36,16 @@ axiosInstance.interceptors.response.use(
 
       try {
         await axiosInstance.post("/auth/refresh-token");
-
         processQueue(null);
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
 
+        const { store } = await import("../redux/store");
+        const { logoutUser } = await import("../redux/slices/authSlice");
         store.dispatch(logoutUser());
 
         window.location.href = "/login";
-
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
