@@ -131,6 +131,7 @@ export default function Signup() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Full Name */}
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Full Name
@@ -153,6 +154,7 @@ export default function Signup() {
               )}
             </div>
 
+            {/* Email */}
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Email Address
@@ -179,6 +181,76 @@ export default function Signup() {
               )}
             </div>
 
+            {/* Password — FIX: this entire block was missing */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Password
+              </label>
+              <FieldWrap hasError={!!errors.password}>
+                <Lock size={16} className="flex-shrink-0 text-slate-500" />
+                <input
+                  type={showPw ? "text" : "password"}
+                  placeholder="Min 8 characters"
+                  className={inputCls}
+                  {...register("password", {
+                    required: "Password is required",
+                    minLength: {
+                      value: 8,
+                      message: "Password must be at least 8 characters",
+                    },
+                    maxLength: {
+                      value: 128,
+                      message: "Password is too long",
+                    },
+                  })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((p) => !p)}
+                  className="flex-shrink-0 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </FieldWrap>
+              {errors.password && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            {/* Confirm Password — FIX: this entire block was missing */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Confirm Password
+              </label>
+              <FieldWrap hasError={!!errors.confirmPassword}>
+                <Lock size={16} className="flex-shrink-0 text-slate-500" />
+                <input
+                  type={showCpw ? "text" : "password"}
+                  placeholder="Re-enter your password"
+                  className={inputCls}
+                  {...register("confirmPassword", {
+                    required: "Please confirm your password",
+                    validate: (val) => val === pw || "Passwords do not match",
+                  })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCpw((p) => !p)}
+                  className="flex-shrink-0 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                >
+                  {showCpw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </FieldWrap>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
+            </div>
+
+            {/* Role Selector */}
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Select Role
