@@ -12,8 +12,15 @@ import enrollmentRoutes from "./routes/enrollment.routes.js";
 
 const app = express();
 
+if (!process.env.CORS_ORIGIN) {
+  console.warn(
+    "WARNING: CORS_ORIGIN env var is not set — cross-origin requests may be rejected"
+  );
+}
+
 const allowedOrigins = [
   process.env.CORS_ORIGIN,
+  "https://acad-lytics.vercel.app",
   "http://localhost:5173",
   "http://localhost:4173",
 ].filter(Boolean);
@@ -33,6 +40,10 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
+
+app.get("/api/v1/health", (_, res) =>
+  res.json({ status: "ok", ts: Date.now() })
+);
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/notifications", notificationRoutes);

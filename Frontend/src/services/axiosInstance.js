@@ -14,10 +14,10 @@ axiosInstance.interceptors.request.use((config) => {
 let isRefreshing = false;
 let failedQueue = [];
 
-const processQueue = (error) => {
+const processQueue = (error, token = null) => {
   failedQueue.forEach((p) => {
     if (error) p.reject(error);
-    else p.resolve();
+    else p.resolve(token);
   });
   failedQueue = [];
 };
@@ -49,7 +49,10 @@ axiosInstance.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then(() => axiosInstance(originalRequest))
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return axiosInstance(originalRequest);
+          })
           .catch((err) => Promise.reject(err));
       }
 
@@ -69,10 +72,10 @@ axiosInstance.interceptors.response.use(
         if (newRefresh) localStorage.setItem("refreshToken", newRefresh);
 
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        processQueue(null);
+        processQueue(null, accessToken);
         return axiosInstance(originalRequest);
       } catch (err) {
-        processQueue(err);
+        processQueue(err, null);
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("pendingEmail");

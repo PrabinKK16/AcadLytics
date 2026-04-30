@@ -159,6 +159,7 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(verifyOTP.fulfilled, (state, action) => {
+        state.loading = false;
         const { user, accessToken, refreshToken } = action.payload || {};
         state.user = user ?? null;
         state.isAuthenticated = !!user;
