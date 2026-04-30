@@ -37,7 +37,7 @@ export default function VerifyOTP() {
 
       toast.success("Welcome back!");
 
-      const role = result?.role;
+      const role = result?.user?.role || result?.role;
       if (role === "student") navigate("/student");
       else if (role === "faculty") navigate("/faculty");
       else if (role === "admin") navigate("/admin");

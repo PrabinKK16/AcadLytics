@@ -9,36 +9,34 @@ const generateAnalyticsInsights = (analyticsData) => {
   }
 
   const weakCOs = analyticsData.coAttainment.filter((co) => co.percentage < 40);
-
   const mediumCOs = analyticsData.coAttainment.filter(
     (co) => co.percentage >= 40 && co.percentage < 70
   );
-
   const strongCOs = analyticsData.coAttainment.filter(
     (co) => co.percentage >= 70
   );
 
   if (strongCOs.length) {
     insights.push(
-      `${strongCOs.length} COs are performing strongly with good student feedback`
+      `${strongCOs.length} CO${strongCOs.length > 1 ? "s are" : " is"} performing strongly with good student feedback`
     );
   }
 
   if (mediumCOs.length) {
     insights.push(
-      `${mediumCOs.length} COs show moderate attainment and may need teaching reinforcement`
+      `${mediumCOs.length} CO${mediumCOs.length > 1 ? "s" : ""} show moderate attainment and may need teaching reinforcement`
     );
   }
 
   if (weakCOs.length) {
     insights.push(
-      `${weakCOs.length} COs are weak and need immediate academic intervation`
+      `${weakCOs.length} CO${weakCOs.length > 1 ? "s are" : " is"} weak and need immediate academic intervention`
     );
   }
 
   weakCOs.forEach((co) => {
     insights.push(
-      `${co.coCode} is low at ${co.percentage}%. Consider revising teaching strategy for this outcome.`
+      `${co.coCode} is low at ${co.percentage}%. Consider revising the teaching strategy for this outcome.`
     );
   });
 

@@ -48,21 +48,28 @@ const startSchedulers = () => {
           const student = enrollment.student;
           if (!student) continue;
 
-          await Notification.create({
-            recipient: student._id,
-            type: "alert",
-            message: `Reminder: feedback form "${form.title}" closes within 24 hours`,
-          });
+          try {
+            await Notification.create({
+              recipient: student._id,
+              type: "alert",
+              message: `Reminder: feedback form "${form.title}" closes within 24 hours`,
+            });
 
-          await sendEmail({
-            to: student.email,
-            subject: "Feedback Deadline Reminder",
-            html: `
-              <h2>Hello ${student.name}</h2>
-              <p>Your feedback form <strong>${form.title}</strong> will close within 24 hours.</p>
-              <p>Please submit your feedback before the deadline.</p>
-            `,
-          });
+            await sendEmail({
+              to: student.email,
+              subject: "Feedback Deadline Reminder",
+              html: `
+                <h2>Hello ${student.name}</h2>
+                <p>Your feedback form <strong>${form.title}</strong> will close within 24 hours.</p>
+                <p>Please submit your feedback before the deadline.</p>
+              `,
+            });
+          } catch (studentError) {
+            console.error(
+              `Scheduler: failed to notify student ${student._id}:`,
+              studentError.message
+            );
+          }
         }
 
         form.reminderSent = true;

@@ -214,3 +214,43 @@ export const deleteSubject = AsyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, {}, "Subject deleted successfully"));
 });
+
+export const createCourseOutcome = AsyncHandler(async (req, res) => {
+  const { course, code, description } = req.body;
+  if (!course || !code || !description) {
+    throw new ApiError(400, "Course, CO code, and description are required");
+  }
+  const existingCourse = await Course.findById(course);
+  if (!existingCourse) {
+    throw new ApiError(404, "Course not found");
+  }
+  const existing = await CourseOutcome.findOne({ course, code });
+  if (existing) {
+    throw new ApiError(409, `CO ${code} already exists for this course`);
+  }
+  const co = await CourseOutcome.create({
+    course,
+    code: code.trim().toUpperCase(),
+    description: description.trim(),
+  });
+  return res
+    .status(201)
+    .json(new ApiResponse(201, co, "Course outcome created successfully"));
+});
+export const getCourseOutcomes = AsyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  const cos = await CourseOutcome.find({ course: courseId }).sort({ code: 1 });
+  return res
+    .status(200)
+    .json(new ApiResponse(200, cos, "Course outcomes fetched successfully"));
+});
+export const deleteCourseOutcome = AsyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const co = await CourseOutcome.findByIdAndDelete(id);
+  if (!co) {
+    throw new ApiError(404, "Course outcome not found");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Course outcome deleted successfully"));
+});

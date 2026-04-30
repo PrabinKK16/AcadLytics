@@ -130,6 +130,12 @@ const dashboardSlice = createSlice({
       })
 
       .addCase(deleteNotification.fulfilled, (state, action) => {
+        const deleted = state.notifications.find(
+          (item) => item._id === action.payload,
+        );
+        if (deleted && !deleted.isRead) {
+          state.unreadCount = Math.max(0, state.unreadCount - 1);
+        }
         state.notifications = state.notifications.filter(
           (item) => item._id !== action.payload,
         );
