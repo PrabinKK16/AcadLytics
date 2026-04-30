@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import ApiError from "./ApiError.js";
 
 const transporter = nodemailer.createTransport({
-  service: "smtp.gmail",
+  service: "smtp.gmail.com",
   port: 465,
   secure: true,
   auth: {
