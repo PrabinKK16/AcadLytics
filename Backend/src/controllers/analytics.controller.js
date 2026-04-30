@@ -3,6 +3,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import AnalyticsSnapshot from "../models/analyticsSnapshot.model.js";
 import { buildCourseAnalytics } from "../utils/analytics.service.js";
 import generateAnalyticsInsights from "../utils/generateAnalyticsInsights.js";
+import ApiError from "../utils/ApiError.js";
 
 export const getCourseAnalyticsData = AsyncHandler(async (req, res) => {
   const { courseId } = req.params;
@@ -53,6 +54,10 @@ export const exportCourseAnalyticsCSV = AsyncHandler(async (req, res) => {
 
 export const getFacultyTrendAnalytics = AsyncHandler(async (req, res) => {
   const { facultyId } = req.params;
+
+  if (req.user.role === "faculty" && req.user._id.toString() !== facultyId) {
+    throw new ApiError(403, "Access denied");
+  }
 
   const snapshots = await AnalyticsSnapshot.find({ faculty: facultyId })
     .populate("course", "name code semester")

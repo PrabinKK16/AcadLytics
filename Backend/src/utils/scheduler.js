@@ -6,7 +6,7 @@ import sendEmail from "./sendEmail.js";
 import logActivity from "./logActivity.js";
 
 const startSchedulers = () => {
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("*/5 * * * *", async () => {
     try {
       const now = new Date();
       const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);

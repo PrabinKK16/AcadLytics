@@ -184,6 +184,12 @@ export const deleteSubject = AsyncHandler(async (req, res) => {
   const formIds = forms.map((f) => f._id);
 
   if (formIds.length > 0) {
+    const submissionIds = await FeedbackSubmission.find({
+      form: { $in: formIds },
+    }).distinct("_id");
+
+    await Response.deleteMany({ submission: { $in: submissionIds } });
+    await FeedbackSubmission.deleteMany({ form: { $in: formIds } });
     await Question.deleteMany({ form: { $in: formIds } });
     await FeedbackForm.deleteMany({ course: id });
   }

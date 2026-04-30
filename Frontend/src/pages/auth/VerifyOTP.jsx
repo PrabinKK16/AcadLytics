@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { Sun, Moon, ShieldCheck } from "lucide-react";
@@ -11,15 +11,16 @@ import { useTheme } from "../../context/ThemeContext";
 export default function VerifyOTP() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, pendingEmail } = useSelector((s) => s.auth);
+  const { loading, pendingEmail: reduxEmail } = useSelector((s) => s.auth);
   const { theme, toggleTheme } = useTheme();
+
+  const [pendingEmail] = useState(
+    () => reduxEmail || localStorage.getItem("pendingEmail"),
+  );
 
   useEffect(() => {
     if (!pendingEmail) {
-      const stored = localStorage.getItem("pendingEmail");
-      if (!stored) {
-        navigate("/login", { replace: true });
-      }
+      navigate("/login", { replace: true });
     }
   }, [pendingEmail, navigate]);
 
@@ -30,6 +31,12 @@ export default function VerifyOTP() {
   } = useForm();
 
   const onSubmit = async (data) => {
+    if (!pendingEmail) {
+      toast.error("Session expired. Please log in again.");
+      navigate("/login", { replace: true });
+      return;
+    }
+
     try {
       const result = await dispatch(
         verifyOTP({ email: pendingEmail, otp: data.otp }),
@@ -65,9 +72,6 @@ export default function VerifyOTP() {
       </div>
 
       <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-5 py-10">
-        <div className="pointer-events-none absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-indigo-300/30 blur-3xl dark:bg-indigo-900/20" />
-        <div className="pointer-events-none absolute bottom-0 right-1/4 h-80 w-80 rounded-full bg-violet-300/20 blur-3xl dark:bg-violet-900/10" />
-
         <motion.div
           initial={{ opacity: 0, y: 28, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}

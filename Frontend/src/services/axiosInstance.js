@@ -75,10 +75,13 @@ axiosInstance.interceptors.response.use(
         processQueue(err);
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        localStorage.removeItem("pendingEmail");
 
         const { store } = await import("../redux/store");
         const { logoutUser } = await import("../redux/slices/authSlice");
         store.dispatch(logoutUser());
+
+        window.location.replace("/login");
 
         return Promise.reject(err);
       } finally {

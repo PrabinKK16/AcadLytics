@@ -5,6 +5,7 @@ const errorHandler = (err, req, res, next) => {
     success: false,
     message: err.message || "Server error",
     errors: err.errors || [],
+    ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
   });
 };
 

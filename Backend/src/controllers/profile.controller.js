@@ -41,7 +41,9 @@ export const updateAvatar = AsyncHandler(async (req, res) => {
   if (user.avatar && user.avatar.includes("res.cloudinary.com")) {
     const publicId = user.avatar.split("/").slice(-2).join("/").split(".")[0];
 
-    await deleteFromCloudinary(publicId);
+    deleteFromCloudinary(publicId).catch((e) =>
+      console.error("Failed to delete old avatar: ", e.message)
+    );
   }
 
   user.avatar = uploadResult.secure_url;
@@ -64,7 +66,9 @@ export const removeAvatar = AsyncHandler(async (req, res) => {
   if (user.avatar && user.avatar.includes("res.cloudinary.com")) {
     const publicId = user.avatar.split("/").slice(-2).join("/").split(".")[0];
 
-    await deleteFromCloudinary(publicId);
+    deleteFromCloudinary(publicId).catch((e) =>
+      console.error("Failed to delete avatar from Cloudinary:", e.message)
+    );
   }
 
   user.avatar = null;
@@ -80,7 +84,7 @@ export const changePassword = AsyncHandler(async (req, res) => {
     throw new ApiError(400, "All password fields required");
   }
 
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id).select("+password");
 
   const isValid = await user.isPasswordCorrect(oldPassword);
 
