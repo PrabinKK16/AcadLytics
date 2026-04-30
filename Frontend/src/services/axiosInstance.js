@@ -81,8 +81,6 @@ axiosInstance.interceptors.response.use(
         const { logoutUser } = await import("../redux/slices/authSlice");
         store.dispatch(logoutUser());
 
-        window.location.replace("/login");
-
         return Promise.reject(err);
       } finally {
         isRefreshing = false;
