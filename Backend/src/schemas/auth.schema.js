@@ -4,13 +4,12 @@ const nameField = z
   .string({ required_error: "Name is required" })
   .min(2, "Name must be at least 2 characters")
   .max(60, "Name must be under 60 characters")
-  .trim();
+  .transform((val) => val.trim());
 
 const emailField = z
   .string({ required_error: "Email is required" })
   .email("Invalid email address")
-  .toLowerCase()
-  .trim();
+  .transform((val) => val.toLowerCase().trim());
 
 const passwordField = z
   .string({ required_error: "Password is required" })
