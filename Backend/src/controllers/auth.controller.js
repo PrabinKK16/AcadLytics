@@ -57,7 +57,7 @@ export const signup = AsyncHandler(async (req, res) => {
 
   const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}`;
 
-  sendEmail({
+  await sendEmail({
     to: createdUser.email,
     subject: "Verify your AcadLytics account",
     html: `
@@ -211,7 +211,7 @@ export const login = AsyncHandler(async (req, res) => {
 
   await user.save({ validateBeforeSave: false });
 
-  sendEmail({
+  await sendEmail({
     to: user.email,
     subject: "Your Login OTP",
     html: `<h2>Your OTP is: ${rawOtp}</h2><p>Valid for 5 minutes</p>`,
@@ -395,7 +395,7 @@ export const forgotPassword = AsyncHandler(async (req, res) => {
 
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}`;
 
-  sendEmail({
+  await sendEmail({
     to: user.email,
     subject: "Reset your AcadLytics password",
     html: `

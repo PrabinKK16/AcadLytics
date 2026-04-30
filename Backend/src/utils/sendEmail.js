@@ -2,10 +2,12 @@ import nodemailer from "nodemailer";
 import ApiError from "./ApiError.js";
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: "smtp.gmail",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.SMTP_EMAIL,
-    pass: process.env.SMTP_PASSWORD,
+    pass: (process.env.SMTP_PASSWORD || "").replace(/\s/g, ""),
   },
 });
 
