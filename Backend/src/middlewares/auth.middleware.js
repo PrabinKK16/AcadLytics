@@ -4,9 +4,7 @@ import AsyncHandler from "../utils/AsyncHandler.js";
 import jwt from "jsonwebtoken";
 
 export const verifyJWT = AsyncHandler(async (req, res, next) => {
-  const token =
-    req.cookies?.accessToken ||
-    req.header("Authorization")?.replace("Bearer ", "");
+  const token = req.cookies?.accessToken;
 
   if (!token) {
     throw new ApiError(401, "Unauthorized request");
@@ -15,7 +13,7 @@ export const verifyJWT = AsyncHandler(async (req, res, next) => {
   let decodedToken;
   try {
     decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-  } catch (error) {
+  } catch {
     throw new ApiError(401, "Invalid or expired access token");
   }
 

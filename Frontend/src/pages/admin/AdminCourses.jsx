@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   X,
   RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import axiosInstance from "../../services/axiosInstance";
 import toast from "react-hot-toast";
@@ -29,7 +30,6 @@ const Field = ({ label, icon: Icon, children }) => (
   </div>
 );
 
-// ── Delete confirm modal ───────────────────────────────────────────────────
 function DeleteModal({ course, onConfirm, onCancel, loading }) {
   return (
     <motion.div
@@ -102,7 +102,6 @@ function DeleteModal({ course, onConfirm, onCancel, loading }) {
 }
 
 export default function AdminCourses() {
-  // ── Create course form ───────────────────────────────────────────────────
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -112,12 +111,14 @@ export default function AdminCourses() {
   const [creating, setCreating] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // ── Manage subjects section ──────────────────────────────────────────────
   const [subjects, setSubjects] = useState([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [facultyList, setFacultyList] = useState([]);
+  const [facultyLoading, setFacultyLoading] = useState(true);
 
   const update = (key) => (e) =>
     setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -134,20 +135,51 @@ export default function AdminCourses() {
     }
   };
 
+  const fetchFaculty = async () => {
+    try {
+      const res = await axiosInstance.get("/profile/faculty");
+      const list = res.data?.data || [];
+      setFacultyList(list);
+      if (list.length > 0) {
+        setForm((p) => ({ ...p, faculty: list[0]._id }));
+      }
+    } catch {
+      toast.error("Could not load faculty list");
+    } finally {
+      setFacultyLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchSubjects();
+    fetchFaculty();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const semesterNum = parseInt(form.semester, 10);
+    if (!Number.isInteger(semesterNum) || semesterNum < 1 || semesterNum > 12) {
+      toast.error("Semester must be a number between 1 and 12");
+      return;
+    }
+
     try {
       setCreating(true);
-      await axiosInstance.post("/admin/course", form);
+      await axiosInstance.post("/admin/course", {
+        ...form,
+        semester: semesterNum,
+      });
       toast.success("Course created successfully");
-      setForm({ name: "", code: "", semester: "", faculty: "" });
+      setForm({
+        name: "",
+        code: "",
+        semester: "",
+        faculty: facultyList[0]?._id || "",
+      });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-      fetchSubjects(); // refresh list
+      fetchSubjects();
     } catch (err) {
       toast.error(err.response?.data?.message || "Course creation failed");
     } finally {
@@ -179,7 +211,6 @@ export default function AdminCourses() {
 
   return (
     <div className="space-y-8">
-      {/* ── Create Course ──────────────────────────────────────────────── */}
       <div className="mx-auto max-w-2xl">
         <SectionHeader
           title="Create Course"
@@ -200,6 +231,7 @@ export default function AdminCourses() {
                   className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
                 />
               </Field>
+
               <Field label="Course Code" icon={Hash}>
                 <input
                   value={form.code}
@@ -209,28 +241,59 @@ export default function AdminCourses() {
                   className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
                 />
               </Field>
-              <Field label="Semester" icon={Calendar}>
+
+              <Field label="Semester (1–12)" icon={Calendar}>
                 <input
+                  type="number"
+                  min={1}
+                  max={12}
                   value={form.semester}
                   onChange={update("semester")}
-                  placeholder="e.g. Fall 2024"
+                  placeholder="e.g. 4"
                   required
                   className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
                 />
               </Field>
-              <Field label="Faculty User ID" icon={User}>
-                <input
-                  value={form.faculty}
-                  onChange={update("faculty")}
-                  placeholder="Paste faculty MongoDB user ID"
-                  required
-                  className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
-                />
-              </Field>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Faculty
+                </label>
+                <div className="relative flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 transition focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-100 dark:border-white/10 dark:bg-white/[0.03]">
+                  <User size={15} className="flex-shrink-0 text-slate-400" />
+                  {facultyLoading ? (
+                    <span className="text-sm text-slate-400">
+                      Loading faculty…
+                    </span>
+                  ) : facultyList.length === 0 ? (
+                    <span className="text-sm text-rose-500">
+                      No faculty available. Add faculty accounts first.
+                    </span>
+                  ) : (
+                    <select
+                      value={form.faculty}
+                      onChange={update("faculty")}
+                      required
+                      className="w-full appearance-none bg-transparent text-sm text-slate-700 outline-none dark:text-white"
+                    >
+                      {facultyList.map((f) => (
+                        <option key={f._id} value={f._id}>
+                          {f.name} — {f.email}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <ChevronDown
+                    size={14}
+                    className="pointer-events-none absolute right-4 text-slate-400"
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center gap-3 pt-1">
                 <button
                   type="submit"
-                  disabled={creating}
+                  disabled={creating || facultyList.length === 0}
                   className="flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 disabled:opacity-60"
                 >
                   {creating ? (
@@ -253,28 +316,8 @@ export default function AdminCourses() {
             </form>
           </Card>
         </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="mt-5 rounded-2xl border border-amber-200/60 bg-amber-50/70 p-4 dark:border-amber-500/20 dark:bg-amber-500/[0.05]"
-        >
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-400">
-            💡 Tip
-          </p>
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-500">
-            The Faculty User ID must be a valid MongoDB ObjectId of a user with
-            the{" "}
-            <code className="rounded bg-amber-100 px-1 dark:bg-amber-500/10">
-              faculty
-            </code>{" "}
-            role. You can find it from the list below.
-          </p>
-        </motion.div>
       </div>
 
-      {/* ── Manage Subjects ────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -306,7 +349,7 @@ export default function AdminCourses() {
             <button
               onClick={fetchSubjects}
               disabled={subjectsLoading}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:bg-white/[0.06]"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400"
               title="Refresh"
             >
               <RefreshCw
@@ -330,7 +373,6 @@ export default function AdminCourses() {
                     <div className="h-3 w-40 animate-pulse rounded bg-slate-100 dark:bg-white/[0.05]" />
                     <div className="h-2.5 w-24 animate-pulse rounded bg-slate-100 dark:bg-white/[0.05]" />
                   </div>
-                  <div className="h-7 w-16 animate-pulse rounded-lg bg-slate-100 dark:bg-white/[0.05]" />
                 </div>
               ))}
             </div>
@@ -352,7 +394,6 @@ export default function AdminCourses() {
             </div>
           ) : (
             <div>
-              {/* Table header */}
               <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3 dark:border-white/[0.05] dark:bg-white/[0.02]">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   #
@@ -360,17 +401,16 @@ export default function AdminCourses() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Subject
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 hidden sm:block">
+                <span className="hidden text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:block">
                   Code
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 hidden md:block">
+                <span className="hidden text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 md:block">
                   Faculty
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Action
                 </span>
               </div>
-
               <AnimatePresence initial={false}>
                 {filteredSubjects.map((subject, idx) => (
                   <motion.div
@@ -381,12 +421,9 @@ export default function AdminCourses() {
                     transition={{ duration: 0.18 }}
                     className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 border-b border-slate-100 px-5 py-4 transition hover:bg-slate-50 dark:border-white/[0.04] dark:hover:bg-white/[0.02]"
                   >
-                    {/* Index */}
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-xs font-bold text-rose-500 dark:bg-rose-500/10 dark:text-rose-400">
                       {idx + 1}
                     </span>
-
-                    {/* Name */}
                     <div>
                       <p className="text-sm font-semibold text-slate-800 dark:text-white">
                         {subject.name}
@@ -395,24 +432,17 @@ export default function AdminCourses() {
                         Semester: {subject.semester}
                       </p>
                     </div>
-
-                    {/* Code */}
                     <span className="hidden rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 sm:block">
                       {subject.code}
                     </span>
-
-                    {/* Faculty */}
                     <span className="hidden max-w-[140px] truncate text-xs text-slate-500 dark:text-slate-400 md:block">
                       {subject.faculty?.name || "—"}
                     </span>
-
-                    {/* Delete button */}
                     <button
                       onClick={() => setDeleteTarget(subject)}
-                      className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20"
+                      className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400"
                     >
-                      <Trash2 size={12} />
-                      Delete
+                      <Trash2 size={12} /> Delete
                     </button>
                   </motion.div>
                 ))}
@@ -422,7 +452,6 @@ export default function AdminCourses() {
         </Card>
       </motion.div>
 
-      {/* ── Delete Confirm Modal ──────────────────────────────────────── */}
       <AnimatePresence>
         {deleteTarget && (
           <DeleteModal

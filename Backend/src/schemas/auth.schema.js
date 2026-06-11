@@ -14,15 +14,17 @@ const emailField = z
 const passwordField = z
   .string({ required_error: "Password is required" })
   .min(8, "Password must be at least 8 characters")
-  .max(128, "Password too long");
+  .max(128, "Password too long")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number");
 
 export const signupSchema = z.object({
   name: nameField,
   email: emailField,
   password: passwordField,
-  role: z.enum(["student", "faculty", "admin"], {
+  role: z.enum(["student", "faculty"], {
     required_error: "Role is required",
-    invalid_type_error: "Role must be student, faculty, or admin",
+    invalid_type_error: "Role must be student or faculty",
   }),
 });
 
@@ -37,4 +39,17 @@ export const otpSchema = z.object({
     .string()
     .length(6, "OTP must be 6 digits")
     .regex(/^\d{6}$/, "OTP must be 6 digits"),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: emailField,
+});
+
+export const resetPasswordSchema = z.object({
+  password: passwordField,
+});
+
+export const changePasswordSchema = z.object({
+  oldPassword: z.string().min(1, "Current password is required"),
+  newPassword: passwordField,
 });

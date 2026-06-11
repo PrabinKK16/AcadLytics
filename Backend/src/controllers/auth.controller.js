@@ -6,16 +6,30 @@ import { generateAccessToken } from "../utils/generateAccessToken.js";
 import { generateRefreshToken } from "../utils/generateRefreshToken.js";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
-import logActivity from "./../utils/logActivity.js";
+import logActivity from "../utils/logActivity.js";
 import Notification from "../models/notification.model.js";
 import crypto from "crypto";
 
-const cookieOptions = () => ({
+const ACCESS_TOKEN_MAX_AGE = 24 * 60 * 60 * 1000;
+const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+
+const baseCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
 });
+
+const accessCookieOptions = () => ({
+  ...baseCookieOptions(),
+  maxAge: ACCESS_TOKEN_MAX_AGE,
+});
+
+const refreshCookieOptions = () => ({
+  ...baseCookieOptions(),
+  maxAge: REFRESH_TOKEN_MAX_AGE,
+});
+
+const clearCookieOptions = () => baseCookieOptions();
 
 export const signup = AsyncHandler(async (req, res) => {
   const { name, email, password, role } = req.body;
@@ -33,7 +47,6 @@ export const signup = AsyncHandler(async (req, res) => {
   const verifyTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   let user;
-
   try {
     user = await User.create({
       name,
@@ -57,19 +70,15 @@ export const signup = AsyncHandler(async (req, res) => {
 
   const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}`;
 
-  await sendEmail({
+  sendEmail({
     to: createdUser.email,
     subject: "Verify your AcadLytics account",
     html: `
       <h2>Welcome to AcadLytics, ${createdUser.name}!</h2>
       <p>Please verify your email address to activate your account.</p>
-      <a href="${verifyUrl}" style="
-        display:inline-block;padding:12px 24px;
-        background:#4f46e5;color:white;
-        text-decoration:none;border-radius:6px;margin:16px 0;
-      ">Verify Email</a>
+      <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:white;text-decoration:none;border-radius:6px;margin:16px 0;">Verify Email</a>
       <p>This link expires in 24 hours.</p>
-      <p>If you didn't create this account, you can ignore this email.</p>
+      <p>If you didn't create this account, you can safely ignore this email.</p>
     `,
   }).catch(console.error);
 
@@ -80,13 +89,10 @@ export const signup = AsyncHandler(async (req, res) => {
       "Welcome to AcadLytics! Please verify your email to get started 🎉",
   });
 
-  await logActivity({
+  logActivity({
     user: createdUser._id,
     action: "USER_SIGNUP",
-    metadata: {
-      email: createdUser.email,
-      role: createdUser.role,
-    },
+    metadata: { email: createdUser.email, role: createdUser.role },
   });
 
   return res
@@ -123,7 +129,7 @@ export const verifyEmail = AsyncHandler(async (req, res) => {
   user.verifyTokenExpiry = undefined;
   await user.save({ validateBeforeSave: false });
 
-  await logActivity({
+  logActivity({
     user: user._id,
     action: "EMAIL_VERIFIED",
     metadata: { email: user.email },
@@ -143,13 +149,12 @@ export const verifyEmail = AsyncHandler(async (req, res) => {
 export const login = AsyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email }).select("+password +refreshToken");
+  const user = await User.findOne({ email }).select(
+    "+password +refreshToken +otp +otpExpiry"
+  );
 
   if (!user) {
-    await logActivity({
-      action: "FAILED_LOGIN",
-      metadata: { email },
-    });
+    logActivity({ action: "FAILED_LOGIN", metadata: { email } });
     throw new ApiError(401, "Invalid credentials");
   }
 
@@ -157,18 +162,17 @@ export const login = AsyncHandler(async (req, res) => {
     throw new ApiError(403, "Email not verified. Please check your inbox.");
   }
 
-  if (user.lockUntil && user.lockUntil < Date.now()) {
+  if (user.lockUntil) {
+    if (user.lockUntil > Date.now()) {
+      throw new ApiError(
+        423,
+        "Account locked due to multiple failed attempts. Try again later or reset your password."
+      );
+    }
     user.loginAttempts = 0;
     user.lockUntil = undefined;
     user.lockCount = 0;
     await user.save({ validateBeforeSave: false });
-  }
-
-  if (user.lockUntil && user.lockUntil > Date.now()) {
-    throw new ApiError(
-      423,
-      "Account locked due to multiple failed attempts. Try again after 15 minutes or reset your password."
-    );
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
@@ -177,44 +181,43 @@ export const login = AsyncHandler(async (req, res) => {
 
     if (user.loginAttempts >= 5) {
       user.lockCount += 1;
-
       const lockDurations = [
         15 * 60 * 1000,
         30 * 60 * 1000,
         60 * 60 * 1000,
         24 * 60 * 60 * 1000,
       ];
-
       const index = Math.min(user.lockCount - 1, lockDurations.length - 1);
       user.lockUntil = new Date(Date.now() + lockDurations[index]);
-
       user.loginAttempts = 0;
     }
 
     await user.save({ validateBeforeSave: false });
-
-    await logActivity({
-      user: user?._id,
+    logActivity({
+      user: user._id,
       action: "FAILED_LOGIN",
       metadata: { email },
     });
     throw new ApiError(401, "Invalid credentials");
   }
 
-  const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
+  const rawOtp = crypto.randomInt(100000, 1000000).toString();
   const hashedOtp = crypto.createHash("sha256").update(rawOtp).digest("hex");
 
   user.otp = hashedOtp;
   user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
   user.otpAttempts = 0;
-
   await user.save({ validateBeforeSave: false });
 
-  await sendEmail({
+  sendEmail({
     to: user.email,
-    subject: "Your Login OTP",
-    html: `<h2>Your OTP is: ${rawOtp}</h2><p>Valid for 5 minutes</p>`,
+    subject: "Your AcadLytics Login OTP",
+    html: `
+      <h2>Your Login OTP</h2>
+      <p>Use the code below to complete your login. It expires in <strong>5 minutes</strong>.</p>
+      <div style="font-size:36px;font-weight:bold;letter-spacing:8px;padding:20px;background:#f5f5f5;border-radius:8px;text-align:center;margin:16px 0;">${rawOtp}</div>
+      <p>If you did not attempt to log in, please reset your password immediately.</p>
+    `,
   }).catch(console.error);
 
   return res
@@ -226,7 +229,7 @@ export const verifyOTP = AsyncHandler(async (req, res) => {
   const { email, otp } = req.body;
 
   const user = await User.findOne({ email }).select(
-    "+otp +otpExpiry +refreshToken"
+    "+otp +otpExpiry +otpAttempts +refreshToken"
   );
 
   if (!user || !user.otp || user.otpExpiry < Date.now()) {
@@ -251,28 +254,25 @@ export const verifyOTP = AsyncHandler(async (req, res) => {
     if (user.otpAttempts >= 5) {
       user.otp = undefined;
       user.otpExpiry = undefined;
-
       user.lockCount += 1;
-
       const lockDurations = [
         15 * 60 * 1000,
         30 * 60 * 1000,
         60 * 60 * 1000,
         24 * 60 * 60 * 1000,
       ];
-
       const index = Math.min(user.lockCount - 1, lockDurations.length - 1);
       user.lockUntil = new Date(Date.now() + lockDurations[index]);
     }
 
     await user.save({ validateBeforeSave: false });
-
     throw new ApiError(400, "Invalid OTP");
   }
 
   user.otp = undefined;
   user.otpExpiry = undefined;
   user.otpAttempts = 0;
+  user.loginAttempts = 0;
 
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
@@ -280,58 +280,43 @@ export const verifyOTP = AsyncHandler(async (req, res) => {
   user.refreshToken = refreshToken;
   await user.save({ validateBeforeSave: false });
 
-  await logActivity({
-    user: user._id,
-    action: "USER_LOGIN",
-  });
+  logActivity({ user: user._id, action: "USER_LOGIN" });
 
   const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken -verifyToken -verifyTokenExpiry -resetPasswordToken -resetPasswordExpiry"
+    "-password -refreshToken -verifyToken -verifyTokenExpiry -resetPasswordToken -resetPasswordExpiry -otp -otpExpiry -otpAttempts"
   );
 
   return res
     .status(200)
-    .cookie("accessToken", accessToken, cookieOptions())
-    .cookie("refreshToken", refreshToken, cookieOptions())
-    .json(
-      new ApiResponse(
-        200,
-        { user: loggedInUser, accessToken, refreshToken },
-        "Login successful"
-      )
-    );
+    .cookie("accessToken", accessToken, accessCookieOptions())
+    .cookie("refreshToken", refreshToken, refreshCookieOptions())
+    .json(new ApiResponse(200, { user: loggedInUser }, "Login successful"));
 });
 
 export const logout = AsyncHandler(async (req, res) => {
-  await User.findByIdAndUpdate(req.user._id, {
-    $unset: {
-      refreshToken: 1,
-    },
-  });
+  await User.findByIdAndUpdate(req.user._id, { $unset: { refreshToken: 1 } });
 
   return res
     .status(200)
-    .clearCookie("accessToken", cookieOptions())
-    .clearCookie("refreshToken", cookieOptions())
+    .clearCookie("accessToken", clearCookieOptions())
+    .clearCookie("refreshToken", clearCookieOptions())
     .json(new ApiResponse(200, {}, "Logout successful"));
 });
 
 export const refreshAccessToken = AsyncHandler(async (req, res) => {
-  const incomingRefreshToken =
-    req.cookies?.refreshToken || req.body.refreshToken;
+  const incomingRefreshToken = req.cookies?.refreshToken;
 
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Refresh token missing");
   }
 
   let decodedToken;
-
   try {
     decodedToken = jwt.verify(
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
-  } catch (error) {
+  } catch {
     throw new ApiError(401, "Invalid or expired refresh token");
   }
 
@@ -349,18 +334,9 @@ export const refreshAccessToken = AsyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .cookie("accessToken", newAccessToken, cookieOptions())
-    .cookie("refreshToken", newRefreshToken, cookieOptions())
-    .json(
-      new ApiResponse(
-        200,
-        {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-        },
-        "Token refreshed successfully"
-      )
-    );
+    .cookie("accessToken", newAccessToken, accessCookieOptions())
+    .cookie("refreshToken", newRefreshToken, refreshCookieOptions())
+    .json(new ApiResponse(200, {}, "Token refreshed successfully"));
 });
 
 export const forgotPassword = AsyncHandler(async (req, res) => {
@@ -383,7 +359,6 @@ export const forgotPassword = AsyncHandler(async (req, res) => {
   }
 
   const rawToken = crypto.randomBytes(32).toString("hex");
-
   const hashedToken = crypto
     .createHash("sha256")
     .update(rawToken)
@@ -395,23 +370,19 @@ export const forgotPassword = AsyncHandler(async (req, res) => {
 
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}`;
 
-  await sendEmail({
+  sendEmail({
     to: user.email,
     subject: "Reset your AcadLytics password",
     html: `
       <h2>Password Reset Request</h2>
       <p>You requested a password reset for your AcadLytics account.</p>
-      <a href="${resetUrl}" style="
-        display:inline-block;padding:12px 24px;
-        background:#4f46e5;color:white;
-        text-decoration:none;border-radius:6px;margin:16px 0;
-      ">Reset Password</a>
+      <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:white;text-decoration:none;border-radius:6px;margin:16px 0;">Reset Password</a>
       <p>This link expires in 1 hour.</p>
       <p>If you didn't request this, safely ignore this email.</p>
     `,
   }).catch(console.error);
 
-  await logActivity({
+  logActivity({
     user: user._id,
     action: "PASSWORD_RESET_REQUESTED",
     metadata: { email: user.email },
@@ -436,10 +407,6 @@ export const resetPassword = AsyncHandler(async (req, res) => {
     throw new ApiError(400, "Reset token is required");
   }
 
-  if (!password || password.length < 8) {
-    throw new ApiError(400, "Password must be atleast 8 characters");
-  }
-
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
   const user = await User.findOne({
@@ -458,9 +425,10 @@ export const resetPassword = AsyncHandler(async (req, res) => {
   user.resetPasswordToken = undefined;
   user.loginAttempts = 0;
   user.lockUntil = undefined;
+  user.lockCount = 0;
   await user.save();
 
-  await logActivity({
+  logActivity({
     user: user._id,
     action: "PASSWORD_RESET_COMPLETED",
     metadata: { email: user.email },

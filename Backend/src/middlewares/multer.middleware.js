@@ -1,6 +1,7 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,26 +13,32 @@ if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, { recursive: true });
 }
 
+const ALLOWED_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+]);
+
+const ALLOWED_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+
 const storage = multer.diskStorage({
-  destination: (_, __, cb) => {
-    cb(null, uploadPath);
-  },
+  destination: (_, __, cb) => cb(null, uploadPath),
   filename: (_, file, cb) => {
-    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueName + path.extname(file.originalname));
+    const uid = crypto.randomUUID();
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${uid}${ext}`);
   },
 });
 
 const fileFilter = (_, file, cb) => {
-  const allowedMimeTypes = [
-    "image/png",
-    "image/jpeg",
-    "image/jpg",
-    "image/webp",
-  ];
+  const ext = path.extname(file.originalname).toLowerCase();
 
-  if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error("Only image files are allowed"), false);
+  if (!ALLOWED_MIME_TYPES.has(file.mimetype) || !ALLOWED_EXTENSIONS.has(ext)) {
+    return cb(
+      new Error("Only PNG, JPG, JPEG and WEBP image files are allowed"),
+      false
+    );
   }
 
   cb(null, true);

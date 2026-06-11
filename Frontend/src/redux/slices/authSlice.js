@@ -104,8 +104,6 @@ export const logoutUser = createAsyncThunk("auth/logoutUser", async () => {
   try {
     await axiosInstance.post("/auth/logout");
   } catch {}
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
   return null;
 });
 
@@ -160,14 +158,12 @@ const authSlice = createSlice({
       })
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.loading = false;
-        const { user, accessToken, refreshToken } = action.payload || {};
+        const { user } = action.payload || {};
         state.user = user ?? null;
         state.isAuthenticated = !!user;
         state.pendingEmail = null;
         state.authInitialized = true;
         localStorage.removeItem("pendingEmail");
-        if (accessToken) localStorage.setItem("accessToken", accessToken);
-        if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.loading = false;

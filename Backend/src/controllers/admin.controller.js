@@ -4,16 +4,25 @@ import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
 import Course from "../models/course.model.js";
 import FeedbackForm from "../models/feedbackForm.model.js";
+import FeedbackSubmission from "../models/feedbackSubmission.model.js";
+import Response from "../models/response.model.js";
 import Question from "../models/question.model.js";
 import CourseOutcome from "../models/courseOutcome.model.js";
 import Notification from "../models/notification.model.js";
+import Enrollment from "../models/enrollment.model.js";
 import logActivity from "../utils/logActivity.js";
+import mongoose from "mongoose";
 
 export const createCourse = AsyncHandler(async (req, res) => {
-  const { name, code, semester, faculty } = req.body;
+  const { name, code, faculty } = req.body;
+  const semester = parseInt(req.body.semester, 10);
 
-  if (!name || !code || !semester || !faculty) {
-    throw new ApiError(400, "All fields are required");
+  if (!name?.trim() || !code?.trim() || !faculty) {
+    throw new ApiError(400, "Name, code and faculty are required");
+  }
+
+  if (!Number.isInteger(semester) || semester < 1 || semester > 12) {
+    throw new ApiError(400, "Semester must be a whole number between 1 and 12");
   }
 
   const existingCourse = await Course.findOne({
@@ -21,7 +30,7 @@ export const createCourse = AsyncHandler(async (req, res) => {
   });
 
   if (existingCourse) {
-    throw new ApiError(409, "Course already exists");
+    throw new ApiError(409, "Course code already exists");
   }
 
   const facultyUser = await User.findById(faculty);
@@ -40,7 +49,13 @@ export const createCourse = AsyncHandler(async (req, res) => {
   await Notification.create({
     recipient: faculty,
     type: "system",
-    message: `Assigned to ${course.code}`,
+    message: `You have been assigned to teach ${course.code} — ${course.name}`,
+  });
+
+  await logActivity({
+    user: req.user._id,
+    action: "COURSE_CREATED",
+    metadata: { courseId: course._id, code: course.code },
   });
 
   return res
@@ -51,26 +66,25 @@ export const createCourse = AsyncHandler(async (req, res) => {
 export const createFeedbackForm = AsyncHandler(async (req, res) => {
   const { title, course, deadline } = req.body;
 
-  if (!title || !course) {
+  if (!title?.trim() || !course) {
     throw new ApiError(400, "Title and course are required");
   }
 
   const existingCourse = await Course.findById(course);
-
   if (!existingCourse) {
     throw new ApiError(404, "Course not found");
   }
 
-  const existingForm = await FeedbackForm.findOne({
-    course,
-    isActive: true,
-  });
-
+  const existingForm = await FeedbackForm.findOne({ course, isActive: true });
   if (existingForm) {
     throw new ApiError(
       409,
       "An active feedback form already exists for this course"
     );
+  }
+
+  if (deadline && new Date(deadline) <= new Date()) {
+    throw new ApiError(400, "Deadline must be in the future");
   }
 
   const form = await FeedbackForm.create({
@@ -83,10 +97,7 @@ export const createFeedbackForm = AsyncHandler(async (req, res) => {
   await logActivity({
     user: req.user._id,
     action: "FEEDBACK_FORM_CREATED",
-    metadata: {
-      formId: form._id,
-      course,
-    },
+    metadata: { formId: form._id, course },
   });
 
   return res
@@ -94,10 +105,32 @@ export const createFeedbackForm = AsyncHandler(async (req, res) => {
     .json(new ApiResponse(201, form, "Feedback form created successfully"));
 });
 
+export const deactivateFeedbackForm = AsyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const form = await FeedbackForm.findById(id);
+  if (!form) {
+    throw new ApiError(404, "Feedback form not found");
+  }
+
+  form.isActive = false;
+  await form.save({ validateBeforeSave: false });
+
+  await logActivity({
+    user: req.user._id,
+    action: "FEEDBACK_FORM_DEACTIVATED",
+    metadata: { formId: id },
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Feedback form deactivated"));
+});
+
 export const addQuestionToForm = AsyncHandler(async (req, res) => {
   const { form, text, type, options, co, weightage = 1 } = req.body;
 
-  if (!form || !text || !type || !co) {
+  if (!form || !text?.trim() || !type || !co) {
     throw new ApiError(400, "Form, text, type and course outcome are required");
   }
 
@@ -106,12 +139,12 @@ export const addQuestionToForm = AsyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid question type");
   }
 
-  if (weightage <= 0) {
-    throw new ApiError(400, "Weightage must be greater than 0");
+  const parsedWeightage = Number(weightage);
+  if (isNaN(parsedWeightage) || parsedWeightage <= 0 || parsedWeightage > 10) {
+    throw new ApiError(400, "Weightage must be between 1 and 10");
   }
 
   const feedbackForm = await FeedbackForm.findById(form);
-
   if (!feedbackForm) {
     throw new ApiError(404, "Feedback form not found");
   }
@@ -121,7 +154,6 @@ export const addQuestionToForm = AsyncHandler(async (req, res) => {
   }
 
   const courseOutcome = await CourseOutcome.findById(co);
-
   if (!courseOutcome) {
     throw new ApiError(404, "Course outcome not found");
   }
@@ -133,33 +165,58 @@ export const addQuestionToForm = AsyncHandler(async (req, res) => {
     );
   }
 
-  if (type === "mcq" && (!options || options.length < 2)) {
-    throw new ApiError(400, "MCQ questions require at least 2 options");
+  if (type === "mcq") {
+    if (!Array.isArray(options) || options.length < 2) {
+      throw new ApiError(400, "MCQ questions require at least 2 options");
+    }
+    if (options.length > 10) {
+      throw new ApiError(400, "MCQ questions can have at most 10 options");
+    }
   }
 
   const question = await Question.create({
     form,
     text: text.trim(),
     type,
-    options: type === "mcq" ? options : [],
+    options: type === "mcq" ? options.map((o) => String(o).trim()) : [],
     co,
-    weightage,
+    weightage: parsedWeightage,
   });
 
   await logActivity({
     user: req.user._id,
     action: "QUESTION_CREATED",
-    metadata: {
-      questionId: question._id,
-      form,
-      co,
-      type,
-    },
+    metadata: { questionId: question._id, form, co, type },
   });
 
   return res
     .status(201)
     .json(new ApiResponse(201, question, "Question added successfully"));
+});
+
+export const deleteQuestion = AsyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const question = await Question.findById(id).populate("form");
+  if (!question) {
+    throw new ApiError(404, "Question not found");
+  }
+
+  if (!question.form?.isActive) {
+    throw new ApiError(400, "Cannot delete question from inactive form");
+  }
+
+  await Question.findByIdAndDelete(id);
+
+  await logActivity({
+    user: req.user._id,
+    action: "QUESTION_DELETED",
+    metadata: { questionId: id },
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Question deleted successfully"));
 });
 
 export const getAllSubjects = AsyncHandler(async (req, res) => {
@@ -180,41 +237,57 @@ export const deleteSubject = AsyncHandler(async (req, res) => {
     throw new ApiError(404, "Subject not found");
   }
 
-  const forms = await FeedbackForm.find({ course: id });
-  const formIds = forms.map((f) => f._id);
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  if (formIds.length > 0) {
-    const submissionIds = await FeedbackSubmission.find({
-      form: { $in: formIds },
-    }).distinct("_id");
+  try {
+    const forms = await FeedbackForm.find({ course: id }).session(session);
+    const formIds = forms.map((f) => f._id);
 
-    await Response.deleteMany({ submission: { $in: submissionIds } });
-    await FeedbackSubmission.deleteMany({ form: { $in: formIds } });
-    await Question.deleteMany({ form: { $in: formIds } });
-    await FeedbackForm.deleteMany({ course: id });
+    if (formIds.length > 0) {
+      const submissionIds = await FeedbackSubmission.find({
+        form: { $in: formIds },
+      })
+        .distinct("_id")
+        .session(session);
+
+      await Response.deleteMany(
+        { submission: { $in: submissionIds } },
+        { session }
+      );
+      await FeedbackSubmission.deleteMany(
+        { form: { $in: formIds } },
+        { session }
+      );
+      await Question.deleteMany({ form: { $in: formIds } }, { session });
+      await FeedbackForm.deleteMany({ course: id }, { session });
+    }
+
+    await CourseOutcome.deleteMany({ course: id }, { session });
+    await Enrollment.deleteMany({ course: id }, { session });
+    await Course.findByIdAndDelete(id, { session });
+
+    await session.commitTransaction();
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
   }
-
-  await CourseOutcome.deleteMany({ course: id });
 
   if (course.faculty) {
     await Notification.create({
       recipient: course.faculty,
       type: "system",
-      message: `Subject ${course.code} has been removed by the admin`,
+      message: `Subject ${course.code} — ${course.name} has been removed by admin`,
     });
   }
 
   await logActivity({
     user: req.user._id,
     action: "SUBJECT_DELETED",
-    metadata: {
-      courseId: id,
-      code: course.code,
-      name: course.name,
-    },
+    metadata: { courseId: id, code: course.code, name: course.name },
   });
-
-  await Course.findByIdAndDelete(id);
 
   return res
     .status(200)
@@ -223,26 +296,35 @@ export const deleteSubject = AsyncHandler(async (req, res) => {
 
 export const createCourseOutcome = AsyncHandler(async (req, res) => {
   const { course, code, description } = req.body;
-  if (!course || !code || !description) {
+
+  if (!course || !code?.trim() || !description?.trim()) {
     throw new ApiError(400, "Course, CO code, and description are required");
   }
+
   const existingCourse = await Course.findById(course);
   if (!existingCourse) {
     throw new ApiError(404, "Course not found");
   }
-  const existing = await CourseOutcome.findOne({ course, code });
+
+  const existing = await CourseOutcome.findOne({
+    course,
+    code: code.trim().toUpperCase(),
+  });
   if (existing) {
     throw new ApiError(409, `CO ${code} already exists for this course`);
   }
+
   const co = await CourseOutcome.create({
     course,
     code: code.trim().toUpperCase(),
     description: description.trim(),
   });
+
   return res
     .status(201)
     .json(new ApiResponse(201, co, "Course outcome created successfully"));
 });
+
 export const getCourseOutcomes = AsyncHandler(async (req, res) => {
   const { courseId } = req.params;
   const cos = await CourseOutcome.find({ course: courseId }).sort({ code: 1 });
@@ -250,6 +332,7 @@ export const getCourseOutcomes = AsyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, cos, "Course outcomes fetched successfully"));
 });
+
 export const deleteCourseOutcome = AsyncHandler(async (req, res) => {
   const { id } = req.params;
   const co = await CourseOutcome.findByIdAndDelete(id);
@@ -259,4 +342,64 @@ export const deleteCourseOutcome = AsyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Course outcome deleted successfully"));
+});
+
+export const enrollStudents = AsyncHandler(async (req, res) => {
+  const { courseId, studentIds } = req.body;
+
+  if (!courseId || !Array.isArray(studentIds) || studentIds.length === 0) {
+    throw new ApiError(400, "courseId and studentIds array are required");
+  }
+
+  const course = await Course.findById(courseId);
+  if (!course) {
+    throw new ApiError(404, "Course not found");
+  }
+
+  const students = await User.find({
+    _id: { $in: studentIds },
+    role: "student",
+  });
+
+  if (students.length !== studentIds.length) {
+    throw new ApiError(400, "One or more student IDs are invalid");
+  }
+
+  const results = await Promise.allSettled(
+    studentIds.map((s) =>
+      Enrollment.updateOne(
+        { student: s, course: courseId },
+        { student: s, course: courseId },
+        { upsert: true }
+      )
+    )
+  );
+
+  const enrolled = results.filter((r) => r.status === "fulfilled").length;
+
+  await logActivity({
+    user: req.user._id,
+    action: "STUDENTS_ENROLLED",
+    metadata: { courseId, enrolled },
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { enrolled },
+        `${enrolled} student(s) enrolled successfully`
+      )
+    );
+});
+
+export const getAllStudents = AsyncHandler(async (req, res) => {
+  const students = await User.find({ role: "student" })
+    .select("_id name email avatar createdAt")
+    .sort({ name: 1 });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, students, "Students fetched successfully"));
 });

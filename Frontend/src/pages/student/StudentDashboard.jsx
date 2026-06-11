@@ -30,13 +30,33 @@ export default function StudentDashboard() {
   const { notifications, unreadCount } = useSelector((s) => s.dashboard);
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     dispatch(fetchNotifications());
     dispatch(fetchUnreadCount());
+
     axiosInstance
       .get("/enrollments/my-courses")
-      .then((r) => setCourses(r.data.data || []))
+      .then(async (r) => {
+        const enrolled = r.data.data || [];
+        setCourses(enrolled);
+
+        let pending = 0;
+        await Promise.all(
+          enrolled.map(async (course) => {
+            try {
+              const res = await axiosInstance.get(
+                `/feedback/active/${course._id}`,
+              );
+              if (res.data.data && !res.data.data.alreadySubmitted) {
+                pending += 1;
+              }
+            } catch {}
+          }),
+        );
+        setPendingCount(pending);
+      })
       .catch(() => {})
       .finally(() => setLoadingCourses(false));
   }, [dispatch]);
@@ -71,7 +91,7 @@ export default function StudentDashboard() {
     },
     {
       title: "Feedback Pending",
-      value: courses.length,
+      value: pendingCount,
       icon: Clock,
       color: "text-amber-600 dark:text-amber-400",
       bg: "bg-amber-50 dark:bg-amber-500/10",
@@ -87,7 +107,6 @@ export default function StudentDashboard() {
         subtitle="Here's your academic activity overview"
       />
 
-      {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s, i) => {
           const Icon = s.icon;
@@ -111,7 +130,9 @@ export default function StudentDashboard() {
               <p
                 className={`mt-3 text-3xl font-bold tracking-tight ${s.color}`}
               >
-                {loadingCourses && s.title === "Enrolled Courses"
+                {loadingCourses &&
+                (s.title === "Enrolled Courses" ||
+                  s.title === "Feedback Pending")
                   ? "…"
                   : s.value}
               </p>
@@ -123,7 +144,6 @@ export default function StudentDashboard() {
         })}
       </div>
 
-      {/* Enrolled courses */}
       <motion.div {...fadeUp(0.3)}>
         <Card className="p-6">
           <div className="mb-5 flex items-center justify-between">
@@ -171,7 +191,7 @@ export default function StudentDashboard() {
                         {course.name}
                       </p>
                       <p className="text-xs text-slate-400 dark:text-slate-500">
-                        {course.code} · {course.semester}
+                        {course.code} · Semester {course.semester}
                       </p>
                     </div>
                   </div>
@@ -188,7 +208,6 @@ export default function StudentDashboard() {
         </Card>
       </motion.div>
 
-      {/* Recent notifications */}
       <motion.div {...fadeUp(0.35)}>
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between">

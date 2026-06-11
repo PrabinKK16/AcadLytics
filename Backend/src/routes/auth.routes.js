@@ -21,6 +21,8 @@ import {
   signupSchema,
   loginSchema,
   otpSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "../schemas/auth.schema.js";
 
 const router = Router();
@@ -31,8 +33,18 @@ router.post("/refresh-token", refreshAccessToken);
 
 router.get("/verify-email", verifyEmail);
 
-router.post("/forgot-password", emailLimiter, forgotPassword);
-router.post("/reset-password", emailLimiter, resetPassword);
+router.post(
+  "/forgot-password",
+  emailLimiter,
+  validate(forgotPasswordSchema),
+  forgotPassword
+);
+router.post(
+  "/reset-password",
+  emailLimiter,
+  validate(resetPasswordSchema),
+  resetPassword
+);
 
 router.get("/me", verifyJWT, getCurrentUser);
 router.post("/logout", verifyJWT, logout);

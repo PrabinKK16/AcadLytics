@@ -4,8 +4,8 @@ import ApiError from "./../utils/ApiError.js";
 import ApiResponse from "./../utils/ApiResponse.js";
 
 export const getMyNotifications = AsyncHandler(async (req, res) => {
-  const page = Number(req.query.page || 1);
-  const limit = Number(req.query.limit || 10);
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 10), 100);
 
   const skip = (page - 1) * limit;
 
@@ -73,6 +73,17 @@ export const markNotificationAsRead = AsyncHandler(async (req, res) => {
     .json(new ApiResponse(200, notification, "Notification marked as read"));
 });
 
+export const markAllNotificationsAsRead = AsyncHandler(async (req, res) => {
+  await Notification.updateMany(
+    { recipient: req.user._id, isRead: false },
+    { isRead: true }
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "All notifications marked as read"));
+});
+
 export const deleteNotification = AsyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -88,4 +99,12 @@ export const deleteNotification = AsyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Notification deleted successfully"));
+});
+
+export const deleteAllNotifications = AsyncHandler(async (req, res) => {
+  await Notification.deleteMany({ recipient: req.user._id });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "All notifications cleared"));
 });

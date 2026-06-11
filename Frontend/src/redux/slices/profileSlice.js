@@ -22,7 +22,9 @@ export const updateAvatar = createAsyncThunk(
       const formData = new FormData();
       formData.append("avatar", file);
 
-      const response = await axiosInstance.patch("/profile/avatar", formData);
+      const response = await axiosInstance.post("/profile/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       return response.data.data.avatar;
     } catch (error) {
@@ -67,7 +69,11 @@ const profileSlice = createSlice({
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    clearProfileError(state) {
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addMatcher(
@@ -99,4 +105,5 @@ const profileSlice = createSlice({
   },
 });
 
+export const { clearProfileError } = profileSlice.actions;
 export default profileSlice.reducer;

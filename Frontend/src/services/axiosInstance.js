@@ -5,19 +5,13 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
 let isRefreshing = false;
 let failedQueue = [];
 
-const processQueue = (error, token = null) => {
+const processQueue = (error) => {
   failedQueue.forEach((p) => {
     if (error) p.reject(error);
-    else p.resolve(token);
+    else p.resolve();
   });
   failedQueue = [];
 };
@@ -49,10 +43,7 @@ axiosInstance.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return axiosInstance(originalRequest);
-          })
+          .then(() => axiosInstance(originalRequest))
           .catch((err) => Promise.reject(err));
       }
 
@@ -60,25 +51,12 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (!refreshToken) throw new Error("No refresh token");
+        await axiosInstance.post("/auth/refresh-token");
 
-        const res = await axiosInstance.post("/auth/refresh-token", {
-          refreshToken,
-        });
-
-        const { accessToken, refreshToken: newRefresh } = res.data.data;
-        localStorage.setItem("accessToken", accessToken);
-        if (newRefresh) localStorage.setItem("refreshToken", newRefresh);
-
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        processQueue(null, accessToken);
+        processQueue(null);
         return axiosInstance(originalRequest);
       } catch (err) {
-        processQueue(err, null);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("pendingEmail");
+        processQueue(err);
 
         const { store } = await import("../redux/store");
         const { logoutUser } = await import("../redux/slices/authSlice");

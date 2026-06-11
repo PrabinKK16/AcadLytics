@@ -33,9 +33,12 @@ export const fetchCourseAnalytics = createAsyncThunk(
 
 export const fetchNotifications = createAsyncThunk(
   "dashboard/fetchNotifications",
-  async (_, thunkAPI) => {
+  async (params = {}, thunkAPI) => {
     try {
-      const response = await axiosInstance.get("/notifications");
+      const { page = 1, limit = 20 } = params;
+      const response = await axiosInstance.get(
+        `/notifications?page=${page}&limit=${limit}`,
+      );
       return response.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -71,6 +74,20 @@ export const markNotificationRead = createAsyncThunk(
   },
 );
 
+export const markAllNotificationsRead = createAsyncThunk(
+  "dashboard/markAllNotificationsRead",
+  async (_, thunkAPI) => {
+    try {
+      await axiosInstance.patch("/notifications/read-all");
+      return true;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to mark all as read",
+      );
+    }
+  },
+);
+
 export const deleteNotification = createAsyncThunk(
   "dashboard/deleteNotification",
   async (id, thunkAPI) => {
@@ -85,6 +102,20 @@ export const deleteNotification = createAsyncThunk(
   },
 );
 
+export const clearAllNotifications = createAsyncThunk(
+  "dashboard/clearAllNotifications",
+  async (_, thunkAPI) => {
+    try {
+      await axiosInstance.delete("/notifications/clear-all");
+      return true;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to clear notifications",
+      );
+    }
+  },
+);
+
 const dashboardSlice = createSlice({
   name: "dashboard",
   initialState: {
@@ -92,6 +123,7 @@ const dashboardSlice = createSlice({
     courseAnalytics: null,
     notifications: [],
     unreadCount: 0,
+    notificationPagination: null,
     loading: false,
     error: null,
   },
@@ -116,6 +148,7 @@ const dashboardSlice = createSlice({
 
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.notifications = action.payload.notifications || [];
+        state.notificationPagination = action.payload.pagination || null;
       })
 
       .addCase(fetchUnreadCount.fulfilled, (state, action) => {
@@ -129,6 +162,14 @@ const dashboardSlice = createSlice({
         state.unreadCount = Math.max(0, state.unreadCount - 1);
       })
 
+      .addCase(markAllNotificationsRead.fulfilled, (state) => {
+        state.notifications = state.notifications.map((item) => ({
+          ...item,
+          isRead: true,
+        }));
+        state.unreadCount = 0;
+      })
+
       .addCase(deleteNotification.fulfilled, (state, action) => {
         const deleted = state.notifications.find(
           (item) => item._id === action.payload,
@@ -139,6 +180,11 @@ const dashboardSlice = createSlice({
         state.notifications = state.notifications.filter(
           (item) => item._id !== action.payload,
         );
+      })
+
+      .addCase(clearAllNotifications.fulfilled, (state) => {
+        state.notifications = [];
+        state.unreadCount = 0;
       });
   },
 });

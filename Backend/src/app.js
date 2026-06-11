@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import errorHandler from "./middlewares/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
@@ -12,18 +13,36 @@ import enrollmentRoutes from "./routes/enrollment.routes.js";
 
 const app = express();
 
-if (!process.env.CORS_ORIGIN) {
-  console.warn(
-    "WARNING: CORS_ORIGIN env var is not set — cross-origin requests may be rejected"
-  );
-}
+const rawOrigins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 
-const allowedOrigins = [
-  process.env.CORS_ORIGIN,
-  "https://acad-lytics.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:4173",
-].filter(Boolean);
+const devOrigins =
+  process.env.NODE_ENV !== "production"
+    ? ["http://localhost:5173", "http://localhost:4173"]
+    : [];
+
+const allowedOrigins = [...new Set([...rawOrigins, ...devOrigins])];
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+        connectSrc: ["'self'", ...rawOrigins],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+  })
+);
 
 app.use(
   cors({
@@ -52,6 +71,10 @@ app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/enrollments", enrollmentRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "Route not found" });
+});
 
 app.use(errorHandler);
 

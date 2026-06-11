@@ -20,5 +20,7 @@ const coSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+coSchema.index({ course: 1, code: 1 }, { unique: true });
+
 const CourseOutcome = mongoose.model("CourseOutcome", coSchema);
 export default CourseOutcome;

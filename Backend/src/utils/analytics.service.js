@@ -21,37 +21,20 @@ export const buildCourseAnalytics = async (courseId) => {
     populate: { path: "co", select: "code description" },
   });
 
+  const baseData = {
+    course: {
+      id: course._id,
+      name: course.name,
+      code: course.code,
+      semester: course.semester,
+    },
+    totalSubmissions: submissions.length,
+    averageScore: 0,
+    coAttainment: [],
+  };
+
   if (!responses.length) {
-    const emptyData = {
-      course: {
-        id: course._id,
-        name: course.name,
-        code: course.code,
-        semester: course.semester,
-      },
-      totalSubmissions: submissions.length,
-      averageScore: 0,
-      coAttainment: [],
-    };
-
-    await AnalyticsSnapshot.findOneAndUpdate(
-      {
-        course: course._id,
-        faculty: course.faculty,
-        semester: course.semester,
-      },
-      {
-        averageScore: 0,
-        totalSubmissions: submissions.length,
-        coAttainment: [],
-      },
-      {
-        upsert: true,
-        new: true,
-      }
-    );
-
-    return emptyData;
+    return baseData;
   }
 
   let totalScore = 0;
@@ -65,7 +48,8 @@ export const buildCourseAnalytics = async (courseId) => {
       totalRatingResponses++;
       totalScore += response.value;
 
-      const coCode = question.co.code;
+      const coCode = question.co?.code;
+      if (!coCode) continue;
 
       if (!coMap[coCode]) {
         coMap[coCode] = {
@@ -102,21 +86,33 @@ export const buildCourseAnalytics = async (courseId) => {
     };
   });
 
-  await AnalyticsSnapshot.findOneAndUpdate(
-    { course: course._id, faculty: course.faculty, semester: course.semester },
-    { averageScore, totalSubmissions: submissions.length, coAttainment },
-    { upsert: true, new: true }
-  );
-
   return {
-    course: {
-      id: course._id,
-      name: course.name,
-      code: course.code,
-      semester: course.semester,
-    },
-    totalSubmissions: submissions.length,
+    ...baseData,
     averageScore,
     coAttainment,
   };
+};
+
+export const snapshotCourseAnalytics = async (courseId) => {
+  const analyticsData = await buildCourseAnalytics(courseId);
+  const course = await Course.findById(courseId);
+
+  await AnalyticsSnapshot.findOneAndUpdate(
+    {
+      course: course._id,
+      faculty: course.faculty,
+      semester: course.semester,
+    },
+    {
+      averageScore: analyticsData.averageScore,
+      totalSubmissions: analyticsData.totalSubmissions,
+      coAttainment: analyticsData.coAttainment,
+    },
+    {
+      upsert: true,
+      new: true,
+    }
+  );
+
+  return analyticsData;
 };

@@ -56,22 +56,18 @@ export default function AdminDashboard() {
   const { notifications, unreadCount, courseAnalytics, facultyTrend, loading } =
     useSelector((s) => s.dashboard);
 
-  // ── Faculty selector state ────────────────────────────────────────────────
   const [facultyList, setFacultyList] = useState([]);
   const [selectedFaculty, setSelectedFaculty] = useState(null);
   const [facultyLoading, setFacultyLoading] = useState(true);
-
-  // ── Course selector state (from trend) ───────────────────────────────────
   const [selectedCourseId, setSelectedCourseId] = useState(null);
 
-  // ── Fetch all faculty on mount ────────────────────────────────────────────
   useEffect(() => {
     dispatch(fetchNotifications());
     dispatch(fetchUnreadCount());
 
     const loadFaculty = async () => {
       try {
-        const res = await axiosInstance.get("/profile/all-faculty");
+        const res = await axiosInstance.get("/profile/faculty");
         const list = res.data?.data || [];
         setFacultyList(list);
         if (list.length > 0) {
@@ -83,17 +79,16 @@ export default function AdminDashboard() {
         setFacultyLoading(false);
       }
     };
+
     loadFaculty();
   }, [dispatch]);
 
-  // ── When selected faculty changes → fetch their trend ────────────────────
   useEffect(() => {
     if (!selectedFaculty) return;
     dispatch(fetchFacultyTrend(selectedFaculty._id));
-    setSelectedCourseId(null); // reset course selection
+    setSelectedCourseId(null);
   }, [dispatch, selectedFaculty]);
 
-  // ── When trend loads → auto-select the first course ──────────────────────
   useEffect(() => {
     if (facultyTrend?.length > 0 && !selectedCourseId) {
       const firstCourseId = facultyTrend[0].course;
@@ -102,7 +97,6 @@ export default function AdminDashboard() {
     }
   }, [dispatch, facultyTrend, selectedCourseId]);
 
-  // ── When admin picks a different course from the trend ───────────────────
   const handleCourseSelect = useCallback(
     (courseId) => {
       setSelectedCourseId(courseId);
@@ -126,6 +120,7 @@ export default function AdminDashboard() {
       a.href = url;
       a.download = `analytics-${courseId}.csv`;
       a.click();
+      window.URL.revokeObjectURL(url);
       toast.success("CSV exported");
     } catch {
       toast.error("Export failed");
@@ -221,7 +216,6 @@ export default function AdminDashboard() {
         subtitle={`Logged in as ${user?.name} · System administrator`}
       />
 
-      {/* System Status */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -263,7 +257,6 @@ export default function AdminDashboard() {
         </div>
       </motion.div>
 
-      {/* Quick Actions */}
       <div>
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
           Quick Actions
@@ -303,25 +296,21 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ── Analytics Section ─────────────────────────────────────────────── */}
       <div>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Course Analytics Overview
           </h3>
-          <div className="flex items-center gap-2">
-            {courseAnalytics && (
-              <button
-                onClick={handleExportCSV}
-                className="flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-400"
-              >
-                <Download size={13} /> Export CSV
-              </button>
-            )}
-          </div>
+          {courseAnalytics && (
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-400"
+            >
+              <Download size={13} /> Export CSV
+            </button>
+          )}
         </div>
 
-        {/* ── Faculty Selector ─────────────────────────────────────────────── */}
         {facultyLoading ? (
           <Skeleton className="mb-4 h-11 w-64" />
         ) : facultyList.length === 0 ? (
@@ -332,7 +321,6 @@ export default function AdminDashboard() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-4 flex flex-wrap items-center gap-3"
           >
-            {/* Faculty dropdown */}
             <div className="relative">
               <select
                 value={selectedFaculty?._id || ""}
@@ -354,7 +342,6 @@ export default function AdminDashboard() {
               />
             </div>
 
-            {/* Course tabs from this faculty's trend */}
             {facultyTrend?.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {facultyTrend.map((snap) => (
@@ -376,7 +363,6 @@ export default function AdminDashboard() {
           </motion.div>
         )}
 
-        {/* ── Career Gap / Trend Chart ─────────────────────────────────────── */}
         {facultyTrend?.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -392,8 +378,7 @@ export default function AdminDashboard() {
                 </span>
               </h3>
               <p className="mb-5 text-xs text-slate-400 dark:text-slate-500">
-                Average score progression across all semesters (career gap
-                analysis)
+                Average score progression across all semesters
               </p>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
@@ -401,20 +386,6 @@ export default function AdminDashboard() {
                     data={facultyTrend}
                     margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
                   >
-                    <defs>
-                      <linearGradient id="vGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop
-                          offset="0%"
-                          stopColor="#7c3aed"
-                          stopOpacity={0.12}
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor="#7c3aed"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke="#e2e8f040"
@@ -449,8 +420,6 @@ export default function AdminDashboard() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-
-              {/* Per-semester summary row */}
               <div className="mt-4 flex flex-wrap gap-2">
                 {facultyTrend.map((snap) => (
                   <div
@@ -479,7 +448,6 @@ export default function AdminDashboard() {
           </motion.div>
         )}
 
-        {/* ── CO Attainment for selected course ───────────────────────────── */}
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
@@ -488,7 +456,6 @@ export default function AdminDashboard() {
           </div>
         ) : courseAnalytics ? (
           <>
-            {/* Stat cards */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {analyticsStatCards.map((s, i) => {
                 const Icon = s.icon;
@@ -525,7 +492,6 @@ export default function AdminDashboard() {
               })}
             </div>
 
-            {/* CO Attainment chart + table */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -541,7 +507,7 @@ export default function AdminDashboard() {
                   </span>
                 </h3>
                 <p className="mb-5 text-xs text-slate-400 dark:text-slate-500">
-                  Attainment % per Course Outcome with level classification
+                  Attainment % per Course Outcome
                 </p>
                 <div className="h-60">
                   <ResponsiveContainer width="100%" height="100%">
@@ -622,7 +588,6 @@ export default function AdminDashboard() {
               </Card>
             </motion.div>
 
-            {/* AI Insights */}
             {courseAnalytics?.insights?.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -667,7 +632,6 @@ export default function AdminDashboard() {
               </motion.div>
             )}
 
-            {/* Weak areas */}
             {weakAreas.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -704,13 +668,12 @@ export default function AdminDashboard() {
             <EmptyState
               icon={BarChart3}
               title="No analytics data yet"
-              subtitle="Analytics will appear here once feedback has been submitted for this faculty"
+              subtitle="Analytics will appear here once feedback has been submitted"
             />
           </Card>
         ) : null}
       </div>
 
-      {/* Recent Notifications */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

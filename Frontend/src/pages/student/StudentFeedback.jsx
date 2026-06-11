@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   BookOpen,
   ClipboardX,
+  AlertCircle,
 } from "lucide-react";
 import axiosInstance from "../../services/axiosInstance";
 import toast from "react-hot-toast";
@@ -38,6 +39,7 @@ export default function StudentFeedback() {
   const [loading, setLoading] = useState(false);
   const [loadingForm, setLoadingForm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
   useEffect(() => {
     axiosInstance
@@ -56,9 +58,13 @@ export default function StudentFeedback() {
     setFormData(null);
     setAnswers({});
     setSubmitted(false);
+    setAlreadySubmitted(false);
     axiosInstance
       .get(`/feedback/active/${selectedCourse}`)
-      .then((r) => setFormData(r.data.data))
+      .then((r) => {
+        setFormData(r.data.data);
+        setAlreadySubmitted(r.data.data?.alreadySubmitted || false);
+      })
       .catch((e) => {
         setFormData(null);
         if (e.response?.status !== 404)
@@ -71,10 +77,23 @@ export default function StudentFeedback() {
 
   const handleSubmit = async () => {
     if (!formData?.form?._id) return;
+
+    const unanswered = formData.questions.filter(
+      (q) => answers[q._id] === undefined || answers[q._id] === "",
+    );
+
+    if (unanswered.length > 0) {
+      toast.error(
+        `Please answer all questions. ${unanswered.length} question${unanswered.length > 1 ? "s" : ""} remaining.`,
+      );
+      return;
+    }
+
     const responses = Object.entries(answers).map(([questionId, value]) => ({
       questionId,
       value: typeof value === "string" && !isNaN(value) ? Number(value) : value,
     }));
+
     try {
       setLoading(true);
       await axiosInstance.post("/feedback/submit", {
@@ -99,7 +118,6 @@ export default function StudentFeedback() {
         subtitle="Share your course experience to help improve teaching quality"
       />
 
-      {/* Course selector */}
       <Card className="mb-5 p-5">
         <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
           Select Course
@@ -123,7 +141,6 @@ export default function StudentFeedback() {
         </div>
       </Card>
 
-      {/* Loading */}
       {loadingForm && (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
@@ -135,7 +152,23 @@ export default function StudentFeedback() {
         </div>
       )}
 
-      {/* Success state */}
+      {alreadySubmitted && !loadingForm && !submitted && (
+        <Card className="p-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-500/10">
+            <CheckCircle2
+              size={32}
+              className="text-emerald-600 dark:text-emerald-400"
+            />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+            Already Submitted
+          </h3>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            You have already submitted feedback for this course.
+          </p>
+        </Card>
+      )}
+
       {submitted && !loadingForm && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -155,17 +188,19 @@ export default function StudentFeedback() {
               Thank you for your valuable feedback.
             </p>
             <button
-              onClick={() => setSubmitted(false)}
+              onClick={() => {
+                setSubmitted(false);
+                setSelectedCourse(courses[0]?._id || "");
+              }}
               className="mt-5 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-700"
             >
-              Submit another
+              Submit for another course
             </button>
           </Card>
         </motion.div>
       )}
 
-      {/* No form */}
-      {!loadingForm && !formData && !submitted && (
+      {!loadingForm && !formData && !submitted && !alreadySubmitted && (
         <Card className="p-6">
           <EmptyState
             icon={ClipboardX}
@@ -175,8 +210,7 @@ export default function StudentFeedback() {
         </Card>
       )}
 
-      {/* Form */}
-      {!loadingForm && formData && !submitted && (
+      {!loadingForm && formData && !submitted && !alreadySubmitted && (
         <>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -218,10 +252,18 @@ export default function StudentFeedback() {
                     <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400">
                       {i + 1}
                     </span>
-                    <div>
-                      <p className="font-medium text-slate-800 dark:text-white">
-                        {q.text}
-                      </p>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-slate-800 dark:text-white">
+                          {q.text}
+                        </p>
+                        {answers[q._id] === undefined && (
+                          <AlertCircle
+                            size={14}
+                            className="mt-0.5 flex-shrink-0 text-amber-400"
+                          />
+                        )}
+                      </div>
                       {q.co && (
                         <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
                           CO: {q.co.code}
@@ -254,6 +296,7 @@ export default function StudentFeedback() {
                             type="radio"
                             name={q._id}
                             value={opt}
+                            checked={answers[q._id] === opt}
                             onChange={(e) =>
                               handleChange(q._id, e.target.value)
                             }
@@ -285,7 +328,7 @@ export default function StudentFeedback() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-6"
+            className="mt-6 flex items-center gap-4"
           >
             <button
               onClick={handleSubmit}
@@ -299,6 +342,9 @@ export default function StudentFeedback() {
               )}
               {loading ? "Submitting…" : "Submit Feedback"}
             </button>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              All {formData.questions.length} questions must be answered
+            </p>
           </motion.div>
         </>
       )}

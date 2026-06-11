@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import upload from "../middlewares/multer.middleware.js";
 import {
   updateProfile,
   updateAvatar,
@@ -8,16 +7,22 @@ import {
   changePassword,
   getAllFaculty,
 } from "../controllers/profile.controller.js";
-import authorizeRoles from "./../middlewares/role.middleware.js";
+import upload from "../middlewares/multer.middleware.js";
+import validate from "../middlewares/validate.middleware.js";
+import { changePasswordSchema } from "../schemas/auth.schema.js";
 
 const router = Router();
 
 router.use(verifyJWT);
 
 router.patch("/", updateProfile);
-router.patch("/avatar", upload.single("avatar"), updateAvatar);
+router.post("/avatar", upload.single("avatar"), updateAvatar);
 router.delete("/avatar", removeAvatar);
-router.patch("/change-password", changePassword);
-router.get("/all-faculty", authorizeRoles("admin"), getAllFaculty);
+router.patch(
+  "/change-password",
+  validate(changePasswordSchema),
+  changePassword
+);
+router.get("/faculty", getAllFaculty);
 
 export default router;

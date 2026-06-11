@@ -3,6 +3,7 @@ import {
   getCourseAnalyticsData,
   exportCourseAnalyticsCSV,
   getFacultyTrendAnalytics,
+  getAdminOverview,
 } from "../controllers/analytics.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import authorizeRoles from "../middlewares/role.middleware.js";
@@ -28,5 +29,7 @@ router.get(
   authorizeRoles("faculty", "admin"),
   getFacultyTrendAnalytics
 );
+
+router.get("/admin/overview", authorizeRoles("admin"), getAdminOverview);
 
 export default router;
